@@ -1,3 +1,4 @@
 *.swp
 nutone-api
 *.db
+*.json

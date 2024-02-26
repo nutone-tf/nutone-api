@@ -159,6 +159,7 @@ func dbHasToken(token string) bool {
 func dbInsertKillEvent(k KillEvent) error {
 	statement, err := db.Prepare(insertKillEventSQL)
 	if err != nil {
+		log.Print(err)
 		return err
 	}
 
@@ -242,6 +243,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	var killEvent KillEvent
 	err := json.NewDecoder(r.Body).Decode(&killEvent)
 	if err != nil {
+		log.Print(err)
 		http.Error(w, "JSON error", http.StatusBadRequest)
 		return
 	}
@@ -251,6 +253,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		http.Error(w, "database error", http.StatusInternalServerError)
 	}
+
 	w.WriteHeader(http.StatusOK)
 }
 

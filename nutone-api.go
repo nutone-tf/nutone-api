@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	_ "rsc.io/sqlite"
 )
@@ -43,6 +44,12 @@ type KillEvent struct {
 	VictimZ                float64 `json:"victim_z"`
 	CauseOfDeath           string  `json:"cause_of_death"`
 	Distance               float64 `json:"distance"`
+}
+
+type PlayerStats struct {
+	Kills  int
+	Deaths int
+	KD     sql.NullFloat64
 }
 
 var db *sql.DB
@@ -134,6 +141,20 @@ INSERT INTO kill_data (
     distance
 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);`
 
+const getPlayerStatsSQL string = `
+WITH nkills AS (
+    SELECT COUNT(1) FROM kill_data
+    WHERE ? IN (attacker_name, attacker_id)
+      AND ? NOT IN (victim_name, victim_id)
+), ndeaths AS (
+    SELECT COUNT(1) FROM kill_data
+    WHERE ? IN (victim_name, victim_id)
+)
+
+SELECT (SELECT * FROM nkills) AS kills,
+       (SELECT * FROM ndeaths) AS deaths,
+       (1.0*(SELECT * FROM nkills)) / (1.0*(SELECT * FROM ndeaths)) AS kd;`
+
 func dbInit() {
 	_, err := db.Exec(createTokenTableSQL)
 	if err != nil {
@@ -218,6 +239,29 @@ func dbInsertKillEvent(k KillEvent) error {
 	return err
 }
 
+func dbGetPlayerStats(playerNameOrUID string) PlayerStats {
+	var ps PlayerStats
+	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID)
+	err := row.Scan(&ps.Kills, &ps.Deaths, &ps.KD)
+	if err == sql.ErrNoRows {
+		return ps
+	} else if err != nil {
+		log.Fatal(err)
+	}
+
+	return ps
+}
+
+func logRequest(r *http.Request) {
+	log.Printf("%s: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+}
+
+func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	jsonResp, _ := json.Marshal(resp)
+	w.Write(jsonResp)
+}
+
 func isValidRequest(r *http.Request) bool {
 	if isTest {
 		return true
@@ -235,30 +279,32 @@ func isValidRequest(r *http.Request) bool {
 	return isValid
 }
 
+func sendInvalidTokenResponse(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusUnauthorized)
+	resp := make(map[string]interface{})
+	resp["message"] = "invalid token"
+	sendJSONResponse(w, resp)
+}
+
 // Returns 200 if request has a valid token in 'Bearer' header
 func authHandler(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
+
 	isValid := isValidRequest(r)
-	if isValid {
-		w.WriteHeader(http.StatusOK)
-	} else {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["message"] = "Invalid token"
-		jsonResp, _ := json.Marshal(resp)
-		w.Write(jsonResp)
+	if !isValid {
+		sendInvalidTokenResponse(w)
+		return
 	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
+
 	isValid := isValidRequest(r)
 	if !isValid {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["message"] = "Invalid token"
-		jsonResp, _ := json.Marshal(resp)
-		w.Write(jsonResp)
+		sendInvalidTokenResponse(w)
 		return
 	}
 
@@ -278,6 +324,32 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func statsHandler(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
+
+	isValid := isValidRequest(r)
+	if !isValid {
+		sendInvalidTokenResponse(w)
+		return
+	}
+
+	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/stats/")
+	ps := dbGetPlayerStats(playerNameOrUID)
+
+	// No rows returned if KD.Valid is false
+	if !ps.KD.Valid {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	resp := make(map[string]interface{})
+	resp["kills"] = ps.Kills
+	resp["deaths"] = ps.Deaths
+	resp["kd"] = ps.KD.Float64
+
+	sendJSONResponse(w, resp)
 }
 
 func main() {
@@ -300,6 +372,7 @@ func main() {
 
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/data", dataHandler)
+	http.HandleFunc("/stats/", statsHandler)
 
 	host := fmt.Sprintf(":%d", *portFlag)
 	http.ListenAndServe(host, nil)

@@ -9,7 +9,6 @@
 
 ## TODO
 
-  * timestamp server-side
   * GET requests for stats
   * chat commands for player stats/top 10
   * map coords

@@ -46,6 +46,7 @@ type KillEvent struct {
 }
 
 var db *sql.DB
+var isTest bool
 
 const createTokenTableSQL string = `
 CREATE TABLE IF NOT EXISTS tokens (
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS tokens (
 
 const createKillDataTableSQL string = `
 CREATE TABLE IF NOT EXISTS kill_data (
+    timestamp                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     match_id                  TEXT,
     server_name               TEXT,
     game_mode                 TEXT,
@@ -87,6 +89,15 @@ CREATE TABLE IF NOT EXISTS kill_data (
     cause_of_death            TEXT,
     distance                  REAL
 );`
+
+var indexSQLs []string = []string{
+	"CREATE INDEX IF NOT EXISTS kill_data_timestamp_idx     ON kill_data (timestamp);",
+	"CREATE INDEX IF NOT EXISTS kill_data_server_name_idx   ON kill_data (server_name);",
+	"CREATE INDEX IF NOT EXISTS kill_data_attacker_name_idx ON kill_data (attacker_name);",
+	"CREATE INDEX IF NOT EXISTS kill_data_attacker_id_idx   ON kill_data (attacker_id);",
+	"CREATE INDEX IF NOT EXISTS kill_data_victim_name_idx   ON kill_data (victim_name);",
+	"CREATE INDEX IF NOT EXISTS kill_data_victim_id_idx     ON kill_data (victim_id);",
+}
 
 const insertKillEventSQL string = `
 INSERT INTO kill_data (
@@ -132,6 +143,13 @@ func dbInit() {
 	_, err = db.Exec(createKillDataTableSQL)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	for _, indexSQL := range indexSQLs {
+		_, err = db.Exec(indexSQL)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -201,6 +219,10 @@ func dbInsertKillEvent(k KillEvent) error {
 }
 
 func isValidRequest(r *http.Request) bool {
+	if isTest {
+		return true
+	}
+
 	isValid := false
 	for name, headers := range r.Header {
 		for _, v := range headers {
@@ -259,9 +281,12 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	var isTestFlag = flag.Bool("t", false, "enable test mode (bypasses token authentication)")
 	var portFlag = flag.Int("p", 8080, "port to listen for HTTP requests")
 	var dbFlag = flag.String("d", "nutone.db", "path to SQLite3 database")
 	flag.Parse()
+
+	isTest = *isTestFlag
 
 	log.Printf("Starting Nutone API on port %d with database '%s'...\n", *portFlag, *dbFlag)
 

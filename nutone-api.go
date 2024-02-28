@@ -329,12 +329,6 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 func statsHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
 
-	isValid := isValidRequest(r)
-	if !isValid {
-		sendInvalidTokenResponse(w)
-		return
-	}
-
 	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/stats/")
 	ps := dbGetPlayerStats(playerNameOrUID)
 

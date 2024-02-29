@@ -198,8 +198,10 @@ func dbHasToken(token string) bool {
 }
 
 func dbInsertKillEvent(k KillEvent) error {
+	dbMutex.Lock()
 	statement, err := db.Prepare(insertKillEventSQL)
 	if err != nil {
+		dbMutex.Unlock()
 		log.Print(err)
 		return err
 	}
@@ -238,15 +240,14 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.Distance,
 	)
 
+	dbMutex.Unlock()
 	return err
 }
 
 func dbGetPlayerStats(playerNameOrUID string) PlayerStats {
 	var ps PlayerStats
-	dbMutex.Lock()
 	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID)
 	err := row.Scan(&ps.Kills, &ps.Deaths, &ps.KD)
-	dbMutex.Unlock()
 	if err == sql.ErrNoRows {
 		return ps
 	} else if err != nil {

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 
 	_ "rsc.io/sqlite"
 )
@@ -53,6 +54,7 @@ type PlayerStats struct {
 }
 
 var db *sql.DB
+var dbMutex sync.Mutex
 var isTest bool
 
 const createTokenTableSQL string = `
@@ -241,8 +243,10 @@ func dbInsertKillEvent(k KillEvent) error {
 
 func dbGetPlayerStats(playerNameOrUID string) PlayerStats {
 	var ps PlayerStats
+	dbMutex.Lock()
 	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID)
 	err := row.Scan(&ps.Kills, &ps.Deaths, &ps.KD)
+	dbMutex.Unlock()
 	if err == sql.ErrNoRows {
 		return ps
 	} else if err != nil {

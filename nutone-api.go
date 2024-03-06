@@ -320,13 +320,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JSON error", http.StatusBadRequest)
 		return
 	}
-	go dbInsertKillEvent(killEvent)
 
-	//if err != nil {
-	//	log.Print(err)
-	//	http.Error(w, "database error", http.StatusInternalServerError)
-	//	return
-	//} figure out how the FUCK to reimplement this
+	err = dbInsertKillEvent(killEvent)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

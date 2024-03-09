@@ -14,14 +14,15 @@ import (
 )
 
 type KillEvent struct {
-	MatchID                string  `json:"match_id"`
-	ServerId               string  `json:"server_id"`
-	ServerName             string  `json:"server_name"`
-	GameMode               string  `json:"game_mode"`
-	GameTime               float64 `json:"game_time"`
-	Map                    string  `json:"map"`
-	AttackerName           string  `json:"attacker_name"`
-	AttackerId             string  `json:"attacker_id"`
+	MatchID      string  `json:"match_id"`
+	ServerId     string  `json:"server_id"`
+	ServerName   string  `json:"server_name"`
+	GameMode     string  `json:"game_mode"`
+	GameTime     float64 `json:"game_time"`
+	Map          string  `json:"map"`
+	AttackerName string  `json:"attacker_name"`
+	AttackerId   string  `json:"attacker_id"`
+
 	AttackerCurrentWeapon  string  `json:"attacker_current_weapon"`
 	AttackerWeapon1        string  `json:"attacker_weapon_1"`
 	AttackerWeapon2        string  `json:"attacker_weapon_2"`
@@ -30,28 +31,24 @@ type KillEvent struct {
 	AttackerOffhandWeapon2 string  `json:"attacker_offhand_weapon_2"`
 	AttackerTitan          string  `json:"attacker_titan"`
 	AttackerX              float64 `json:"attacker_x"`
-	AttackerY              float64 `json:"attacker_y"`
-	AttackerZ              float64 `json:"attacker_z"`
-	VictimName             string  `json:"victim_name"`
-	VictimId               string  `json:"victim_id"`
-	VictimCurrentWeapon    string  `json:"victim_current_weapon"`
-	VictimWeapon1          string  `json:"victim_weapon_1"`
-	VictimWeapon2          string  `json:"victim_weapon_2"`
-	VictimWeapon3          string  `json:"victim_weapon_3"`
-	VictimOffhandWeapon1   string  `json:"victim_offhand_weapon_1"`
-	VictimOffhandWeapon2   string  `json:"victim_offhand_weapon_2"`
-	VictimTitan            string  `json:"victim_titan"`
-	VictimX                float64 `json:"victim_x"`
-	VictimY                float64 `json:"victim_y"`
-	VictimZ                float64 `json:"victim_z"`
-	CauseOfDeath           string  `json:"cause_of_death"`
-	Distance               float64 `json:"distance"`
-}
 
-type PlayerStats struct {
-	Kills  int
-	Deaths int
-	KD     sql.NullFloat64
+	AttackerY           float64 `json:"attacker_y"`
+	AttackerZ           float64 `json:"attacker_z"`
+	VictimName          string  `json:"victim_name"`
+	VictimId            string  `json:"victim_id"`
+	VictimCurrentWeapon string  `json:"victim_current_weapon"`
+	VictimWeapon1       string  `json:"victim_weapon_1"`
+	VictimWeapon2       string  `json:"victim_weapon_2"`
+	VictimWeapon3       string  `json:"victim_weapon_3"`
+
+	VictimOffhandWeapon1 string  `json:"victim_offhand_weapon_1"`
+	VictimOffhandWeapon2 string  `json:"victim_offhand_weapon_2"`
+	VictimTitan          string  `json:"victim_titan"`
+	VictimX              float64 `json:"victim_x"`
+	VictimY              float64 `json:"victim_y"`
+	VictimZ              float64 `json:"victim_z"`
+	CauseOfDeath         string  `json:"cause_of_death"`
+	Distance             float64 `json:"distance"`
 }
 
 var db *sql.DB
@@ -67,6 +64,7 @@ CREATE TABLE IF NOT EXISTS tokens (
 const createKillDataTableSQL string = `
 CREATE TABLE IF NOT EXISTS kill_data (
     timestamp                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     match_id                  TEXT,
     server_id                 TEXT,
     server_name               TEXT,
@@ -75,6 +73,7 @@ CREATE TABLE IF NOT EXISTS kill_data (
     map                       TEXT,
     attacker_name             TEXT,
     attacker_id               TEXT,
+
     attacker_current_weapon   TEXT,
     attacker_weapon_1         TEXT,
     attacker_weapon_2         TEXT,
@@ -83,6 +82,7 @@ CREATE TABLE IF NOT EXISTS kill_data (
     attacker_offhand_weapon_2 TEXT,
     attacker_titan            TEXT,
     attacker_x                REAL,
+
     attacker_y                REAL,
     attacker_z                REAL,
     victim_name               TEXT,
@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS kill_data (
     victim_weapon_1           TEXT,
     victim_weapon_2           TEXT,
     victim_weapon_3           TEXT,
+
     victim_offhand_weapon_1   TEXT,
     victim_offhand_weapon_2   TEXT,
     victim_titan              TEXT,
@@ -120,6 +121,7 @@ INSERT INTO kill_data (
     map,                      
     attacker_name,             
     attacker_id,              
+
     attacker_current_weapon,   
     attacker_weapon_1,        
     attacker_weapon_2,        
@@ -128,6 +130,7 @@ INSERT INTO kill_data (
     attacker_offhand_weapon_2,
     attacker_titan,            
     attacker_x,               
+
     attacker_y,               
     attacker_z,               
     victim_name,               
@@ -136,6 +139,7 @@ INSERT INTO kill_data (
     victim_weapon_1,          
     victim_weapon_2,          
     victim_weapon_3,          
+
     victim_offhand_weapon_1,   
     victim_offhand_weapon_2,   
     victim_titan,             
@@ -144,10 +148,17 @@ INSERT INTO kill_data (
     victim_z,                 
     cause_of_death,            
     distance
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);`
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?);`
 
 const getPlayerStatsSQL string = `
-WITH nkills AS (
+WITH ids AS (
+    SELECT attacker_name AS name, attacker_id AS uid FROM kill_data
+    WHERE ? IN (attacker_name, attacker_id)
+    LIMIT 1
+), nkills AS (
     SELECT COUNT(1) FROM kill_data
     WHERE ? IN (attacker_name, attacker_id)
       AND ? NOT IN (victim_name, victim_id)
@@ -156,9 +167,19 @@ WITH nkills AS (
     WHERE ? IN (victim_name, victim_id)
 )
 
-SELECT (SELECT * FROM nkills) AS kills,
+SELECT (SELECT name FROM ids) AS name,
+       (SELECT uid FROM ids) AS uid,
+       (SELECT * FROM nkills) AS kills,
        (SELECT * FROM ndeaths) AS deaths,
        (1.0*(SELECT * FROM nkills)) / (1.0*(SELECT * FROM ndeaths)) AS kd;`
+
+type PlayerStatsSQLResult struct {
+	Name   sql.NullString
+	UID    sql.NullString
+	Kills  int
+	Deaths int
+	KD     sql.NullFloat64
+}
 
 func dbInit() {
 	_, err := db.Exec(createTokenTableSQL)
@@ -201,14 +222,15 @@ func dbHasToken(token string) bool {
 }
 
 func dbInsertKillEvent(k KillEvent) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	statement, err := db.Prepare(insertKillEventSQL)
 	if err != nil {
 		log.Print(err)
 		return err
 	}
 
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
 	_, err = statement.Exec(
 		k.MatchID,
 		k.ServerId,
@@ -218,6 +240,7 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.Map,
 		k.AttackerName,
 		k.AttackerId,
+
 		k.AttackerCurrentWeapon,
 		k.AttackerWeapon1,
 		k.AttackerWeapon2,
@@ -226,6 +249,7 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.AttackerOffhandWeapon2,
 		k.AttackerTitan,
 		k.AttackerX,
+
 		k.AttackerY,
 		k.AttackerZ,
 		k.VictimName,
@@ -234,6 +258,7 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.VictimWeapon1,
 		k.VictimWeapon2,
 		k.VictimWeapon3,
+
 		k.VictimOffhandWeapon1,
 		k.VictimOffhandWeapon2,
 		k.VictimTitan,
@@ -247,17 +272,22 @@ func dbInsertKillEvent(k KillEvent) error {
 	return err
 }
 
-func dbGetPlayerStats(playerNameOrUID string) PlayerStats {
-	var ps PlayerStats
-	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID)
-	err := row.Scan(&ps.Kills, &ps.Deaths, &ps.KD)
+func dbGetPlayerStats(playerNameOrUID string) *PlayerStatsSQLResult {
+	var ps PlayerStatsSQLResult
+	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID, playerNameOrUID)
+	err := row.Scan(&ps.Name, &ps.UID, &ps.Kills, &ps.Deaths, &ps.KD)
+	// TODO: figure out why this doesn't work
 	if err == sql.ErrNoRows {
-		return ps
-	} else if err != nil {
-		log.Fatal(err)
+		log.Print("no rows found")
+		return nil
 	}
 
-	return ps
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+
+	return &ps
 }
 
 func logRequest(r *http.Request) {
@@ -334,19 +364,20 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func statsHandler(w http.ResponseWriter, r *http.Request) {
+func playerHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
 
-	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/stats/")
+	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/players/")
 	ps := dbGetPlayerStats(playerNameOrUID)
-
-	// No rows returned if KD.Valid is false
-	if !ps.KD.Valid {
+	// TODO: make ErrNoRows work
+	if !ps.Name.Valid {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	resp := make(map[string]interface{})
+	resp["name"] = ps.Name.String
+	resp["uid"] = ps.UID.String
 	resp["kills"] = ps.Kills
 	resp["deaths"] = ps.Deaths
 	resp["kd"] = ps.KD.Float64
@@ -415,7 +446,7 @@ func main() {
 
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/data", dataHandler)
-	http.HandleFunc("/stats/", statsHandler)
+	http.HandleFunc("/players/", playerHandler)
 
 	host := fmt.Sprintf(":%d", *portFlag)
 	http.ListenAndServe(host, nil)

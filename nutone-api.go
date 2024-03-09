@@ -15,6 +15,7 @@ import (
 
 type KillEvent struct {
 	MatchID                string  `json:"match_id"`
+	ServerId               string  `json:"server_id"`
 	ServerName             string  `json:"server_name"`
 	GameMode               string  `json:"game_mode"`
 	GameTime               float64 `json:"game_time"`
@@ -67,6 +68,7 @@ const createKillDataTableSQL string = `
 CREATE TABLE IF NOT EXISTS kill_data (
     timestamp                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     match_id                  TEXT,
+    server_id                 TEXT,
     server_name               TEXT,
     game_mode                 TEXT,
     game_time                 REAL,
@@ -101,7 +103,7 @@ CREATE TABLE IF NOT EXISTS kill_data (
 
 var indexSQLs []string = []string{
 	"CREATE INDEX IF NOT EXISTS kill_data_timestamp_idx     ON kill_data (timestamp);",
-	"CREATE INDEX IF NOT EXISTS kill_data_server_name_idx   ON kill_data (server_name);",
+	"CREATE INDEX IF NOT EXISTS kill_data_server_id_idx     ON kill_data (server_id);",
 	"CREATE INDEX IF NOT EXISTS kill_data_attacker_name_idx ON kill_data (attacker_name);",
 	"CREATE INDEX IF NOT EXISTS kill_data_attacker_id_idx   ON kill_data (attacker_id);",
 	"CREATE INDEX IF NOT EXISTS kill_data_victim_name_idx   ON kill_data (victim_name);",
@@ -111,6 +113,7 @@ var indexSQLs []string = []string{
 const insertKillEventSQL string = `
 INSERT INTO kill_data (
     match_id,                 
+    server_id,               
     server_name,               
     game_mode,                
     game_time,                
@@ -208,6 +211,7 @@ func dbInsertKillEvent(k KillEvent) error {
 	defer dbMutex.Unlock()
 	_, err = statement.Exec(
 		k.MatchID,
+		k.ServerId,
 		k.ServerName,
 		k.GameMode,
 		k.GameTime,
@@ -350,6 +354,47 @@ func statsHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, resp)
 }
 
+// {
+//     "name": "fvnkhead",
+//     "uid": "1234",
+//     "total": {
+//         "kills": 10,
+//         "deaths": 5,
+//         "kd": 2.0
+//     },
+//     "servers": [
+//         {
+//             "name": "fvnkhead's sticks",
+//             "id": "fvnkhead_sticks", # server_id to be added into convars later
+//             "kills": 5,
+//             "deaths": 0,
+//             "kd": 5.0 # if deaths = 0, calculate kd as if 1
+//         }, {
+//         "name": "fvnkhead's 8v8",
+//         "id": "fvnkhead_big_pvp",
+//         "kills": 5,
+//         "deaths": 5,
+//         "kd": 1.0
+//         }
+//     ]
+// }
+// GET /players # returns all players
+// GET /players/<playername> # returns object like in A
+// GET /servers # returns all servers
+// GET /servers/<server_id>, e.g. `GET /servers/fvnkhead%27s%20sticks` (can use either URL-encoded server name or server_id) =>
+// {
+//       "name": "fvnkhead's sticks",
+//       "id": "fvnkhead_sticks",
+//       "players" [
+//         {
+//          "name": "fvnkhead",
+//          "uid": "1234",
+//           ...
+//         },
+//       ..
+//       ]
+// }
+//
 func main() {
 	var isTestFlag = flag.Bool("t", false, "enable test mode (bypasses token authentication)")
 	var portFlag = flag.Int("p", 8080, "port to listen for HTTP requests")

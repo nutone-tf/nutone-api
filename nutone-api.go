@@ -198,14 +198,14 @@ func dbHasToken(token string) bool {
 }
 
 func dbInsertKillEvent(k KillEvent) error {
-	dbMutex.Lock()
 	statement, err := db.Prepare(insertKillEventSQL)
 	if err != nil {
-		dbMutex.Unlock()
 		log.Print(err)
 		return err
 	}
 
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
 	_, err = statement.Exec(
 		k.MatchID,
 		k.ServerName,
@@ -240,7 +240,6 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.Distance,
 	)
 
-	dbMutex.Unlock()
 	return err
 }
 

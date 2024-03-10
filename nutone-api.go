@@ -155,7 +155,7 @@ INSERT INTO kill_data (
 
 const getPlayerStatsSQL string = `
 WITH recent_kill_data AS(
-    SELECT * FROM kill_data WHERE timestamp >= datetime('now', '14 days')
+    SELECT * FROM kill_data WHERE timestamp >= datetime('now', '-14 days')
 ), ids AS (
     SELECT attacker_name AS name, attacker_id AS uid FROM recent_kill_data
     WHERE ? IN (attacker_name, attacker_id)

@@ -15,7 +15,7 @@ import (
 
 type KillEvent struct {
 	MatchID      string  `json:"match_id"`
-	ServerId     string  `json:"server_id"`
+	ServerID     string  `json:"server_id"`
 	ServerName   string  `json:"server_name"`
 	GameMode     string  `json:"game_mode"`
 	GameTime     float64 `json:"game_time"`
@@ -154,18 +154,21 @@ INSERT INTO kill_data (
           ?, ?, ?, ?, ?, ?, ?, ?);`
 
 const getPlayerStatsSQL string = `
-WITH recent_kill_data AS(
-    SELECT * FROM kill_data WHERE timestamp >= datetime('now', '-14 days')
+WITH server_kill_data AS (
+    SELECT * FROM kill_data
+    WHERE CASE WHEN ? = '' THEN 1
+               ELSE server_id = ?
+          END
 ), ids AS (
-    SELECT attacker_name AS name, attacker_id AS uid FROM recent_kill_data
+    SELECT attacker_name AS name, attacker_id AS uid FROM server_kill_data
     WHERE ? IN (attacker_name, attacker_id)
     LIMIT 1
 ), nkills AS (
-    SELECT COUNT(1) FROM recent_kill_data
+    SELECT COUNT(1) FROM server_kill_data
     WHERE ? IN (attacker_name, attacker_id)
       AND ? NOT IN (victim_name, victim_id)
 ), ndeaths AS (
-    SELECT COUNT(1) FROM recent_kill_data
+    SELECT COUNT(1) FROM server_kill_data
     WHERE ? IN (victim_name, victim_id)
 )
 
@@ -240,7 +243,7 @@ func dbInsertKillEvent(k KillEvent) error {
 
 	_, err = statement.Exec(
 		k.MatchID,
-		k.ServerId,
+		k.ServerID,
 		k.ServerName,
 		k.GameMode,
 		k.GameTime,
@@ -279,12 +282,21 @@ func dbInsertKillEvent(k KillEvent) error {
 	return err
 }
 
-func dbGetPlayerStats(playerNameOrUID string) *PlayerStatsSQLResult {
+func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLResult {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 
 	var ps PlayerStatsSQLResult
-	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID, playerNameOrUID)
+	row := db.QueryRow(
+		getPlayerStatsSQL,
+		serverID,
+		serverID,
+		playerNameOrUID,
+		playerNameOrUID,
+		playerNameOrUID,
+		playerNameOrUID,
+	)
+
 	err := row.Scan(&ps.Name, &ps.UID, &ps.Kills, &ps.Deaths, &ps.KD)
 	// TODO: figure out why this doesn't work
 	if err == sql.ErrNoRows {
@@ -377,8 +389,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 func playerHandler(w http.ResponseWriter, r *http.Request) {
 	logRequest(r)
 
+	serverID := r.URL.Query().Get("server_id")
 	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/players/")
-	ps := dbGetPlayerStats(playerNameOrUID)
+	ps := dbGetPlayerStats(serverID, playerNameOrUID)
 	// TODO: make ErrNoRows work
 	if !ps.Name.Valid {
 		w.WriteHeader(http.StatusNotFound)

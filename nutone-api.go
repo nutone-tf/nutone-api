@@ -203,6 +203,9 @@ func dbInit() {
 }
 
 func dbHasToken(token string) bool {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	if db == nil {
 		log.Fatal("Database unopened, exiting")
 		return false
@@ -277,6 +280,9 @@ func dbInsertKillEvent(k KillEvent) error {
 }
 
 func dbGetPlayerStats(playerNameOrUID string) *PlayerStatsSQLResult {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	var ps PlayerStatsSQLResult
 	row := db.QueryRow(getPlayerStatsSQL, playerNameOrUID, playerNameOrUID, playerNameOrUID, playerNameOrUID)
 	err := row.Scan(&ps.Name, &ps.UID, &ps.Kills, &ps.Deaths, &ps.KD)

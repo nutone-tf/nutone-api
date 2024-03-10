@@ -9,7 +9,9 @@
 
 ## TODO
 
-  * GET requests for stats
-  * chat commands for player stats/top 10
+  * locking issues
+  * server-specific stats
+  * players stats when kills = 0
+  * top player query
   * map coords
   * HS/ricochet stuff?

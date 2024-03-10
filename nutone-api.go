@@ -154,16 +154,18 @@ INSERT INTO kill_data (
           ?, ?, ?, ?, ?, ?, ?, ?);`
 
 const getPlayerStatsSQL string = `
-WITH ids AS (
-    SELECT attacker_name AS name, attacker_id AS uid FROM kill_data
+WITH recent_kill_data AS(
+    SELECT * FROM kill_data WHERE timestamp >= datetime('now', '-1 minute')
+), ids AS (
+    SELECT attacker_name AS name, attacker_id AS uid FROM recent_kill_data
     WHERE ? IN (attacker_name, attacker_id)
     LIMIT 1
 ), nkills AS (
-    SELECT COUNT(1) FROM kill_data
+    SELECT COUNT(1) FROM recent_kill_data
     WHERE ? IN (attacker_name, attacker_id)
       AND ? NOT IN (victim_name, victim_id)
 ), ndeaths AS (
-    SELECT COUNT(1) FROM kill_data
+    SELECT COUNT(1) FROM recent_kill_data
     WHERE ? IN (victim_name, victim_id)
 )
 

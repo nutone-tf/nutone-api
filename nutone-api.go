@@ -231,6 +231,8 @@ func dbInsertKillEvent(k KillEvent) error {
 		return err
 	}
 
+	defer statement.Close()
+
 	_, err = statement.Exec(
 		k.MatchID,
 		k.ServerId,

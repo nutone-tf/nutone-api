@@ -159,9 +159,6 @@ WITH recent_kill_data AS(
 ), ids AS (
     SELECT attacker_name AS name, attacker_id AS uid FROM recent_kill_data
     WHERE ? IN (attacker_name, attacker_id)
-    UNION 
-    SELECT victim_name AS name, victim_id AS uid FROM recent_kill_data
-    WHERE ? IN (victim_name, victim_id)
     LIMIT 1
 ), nkills AS (
     SELECT COUNT(1) FROM recent_kill_data
@@ -172,8 +169,8 @@ WITH recent_kill_data AS(
     WHERE ? IN (victim_name, victim_id)
 )
 
-SELECT (SELECT name FROM ids WHERE name IS NOT NULL) AS name,
-       (SELECT uid FROM ids WHERE uid IS NOT NULL) AS uid,
+SELECT (SELECT name FROM ids) AS name,
+       (SELECT uid FROM ids) AS uid,
        (SELECT * FROM nkills) AS kills,
        (SELECT * FROM ndeaths) AS deaths,
        (1.0*(SELECT * FROM nkills)) / (1.0*(SELECT * FROM ndeaths)) AS kd;`

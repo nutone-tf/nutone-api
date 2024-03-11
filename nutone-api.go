@@ -14,15 +14,14 @@ import (
 )
 
 type KillEvent struct {
-	MatchID      string  `json:"match_id"`
-	ServerID     string  `json:"server_id"`
-	ServerName   string  `json:"server_name"`
-	GameMode     string  `json:"game_mode"`
-	GameTime     float64 `json:"game_time"`
-	Map          string  `json:"map"`
-	AttackerName string  `json:"attacker_name"`
-	AttackerId   string  `json:"attacker_id"`
-
+	MatchID                string  `json:"match_id"`
+	ServerID               string  `json:"server_id"`
+	ServerName             string  `json:"server_name"`
+	GameMode               string  `json:"game_mode"`
+	GameTime               float64 `json:"game_time"`
+	Map                    string  `json:"map"`
+	AttackerName           string  `json:"attacker_name"`
+	AttackerId             string  `json:"attacker_id"`
 	AttackerCurrentWeapon  string  `json:"attacker_current_weapon"`
 	AttackerWeapon1        string  `json:"attacker_weapon_1"`
 	AttackerWeapon2        string  `json:"attacker_weapon_2"`
@@ -31,24 +30,22 @@ type KillEvent struct {
 	AttackerOffhandWeapon2 string  `json:"attacker_offhand_weapon_2"`
 	AttackerTitan          string  `json:"attacker_titan"`
 	AttackerX              float64 `json:"attacker_x"`
-
-	AttackerY           float64 `json:"attacker_y"`
-	AttackerZ           float64 `json:"attacker_z"`
-	VictimName          string  `json:"victim_name"`
-	VictimId            string  `json:"victim_id"`
-	VictimCurrentWeapon string  `json:"victim_current_weapon"`
-	VictimWeapon1       string  `json:"victim_weapon_1"`
-	VictimWeapon2       string  `json:"victim_weapon_2"`
-	VictimWeapon3       string  `json:"victim_weapon_3"`
-
-	VictimOffhandWeapon1 string  `json:"victim_offhand_weapon_1"`
-	VictimOffhandWeapon2 string  `json:"victim_offhand_weapon_2"`
-	VictimTitan          string  `json:"victim_titan"`
-	VictimX              float64 `json:"victim_x"`
-	VictimY              float64 `json:"victim_y"`
-	VictimZ              float64 `json:"victim_z"`
-	CauseOfDeath         string  `json:"cause_of_death"`
-	Distance             float64 `json:"distance"`
+	AttackerY              float64 `json:"attacker_y"`
+	AttackerZ              float64 `json:"attacker_z"`
+	VictimName             string  `json:"victim_name"`
+	VictimId               string  `json:"victim_id"`
+	VictimCurrentWeapon    string  `json:"victim_current_weapon"`
+	VictimWeapon1          string  `json:"victim_weapon_1"`
+	VictimWeapon2          string  `json:"victim_weapon_2"`
+	VictimWeapon3          string  `json:"victim_weapon_3"`
+	VictimOffhandWeapon1   string  `json:"victim_offhand_weapon_1"`
+	VictimOffhandWeapon2   string  `json:"victim_offhand_weapon_2"`
+	VictimTitan            string  `json:"victim_titan"`
+	VictimX                float64 `json:"victim_x"`
+	VictimY                float64 `json:"victim_y"`
+	VictimZ                float64 `json:"victim_z"`
+	CauseOfDeath           string  `json:"cause_of_death"`
+	Distance               float64 `json:"distance"`
 }
 
 var db *sql.DB
@@ -64,7 +61,6 @@ CREATE TABLE IF NOT EXISTS tokens (
 const createKillDataTableSQL string = `
 CREATE TABLE IF NOT EXISTS kill_data (
     timestamp                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
     match_id                  TEXT,
     server_id                 TEXT,
     server_name               TEXT,
@@ -73,7 +69,6 @@ CREATE TABLE IF NOT EXISTS kill_data (
     map                       TEXT,
     attacker_name             TEXT,
     attacker_id               TEXT,
-
     attacker_current_weapon   TEXT,
     attacker_weapon_1         TEXT,
     attacker_weapon_2         TEXT,
@@ -82,7 +77,6 @@ CREATE TABLE IF NOT EXISTS kill_data (
     attacker_offhand_weapon_2 TEXT,
     attacker_titan            TEXT,
     attacker_x                REAL,
-
     attacker_y                REAL,
     attacker_z                REAL,
     victim_name               TEXT,
@@ -91,7 +85,6 @@ CREATE TABLE IF NOT EXISTS kill_data (
     victim_weapon_1           TEXT,
     victim_weapon_2           TEXT,
     victim_weapon_3           TEXT,
-
     victim_offhand_weapon_1   TEXT,
     victim_offhand_weapon_2   TEXT,
     victim_titan              TEXT,
@@ -121,7 +114,6 @@ INSERT INTO kill_data (
     map,                      
     attacker_name,             
     attacker_id,              
-
     attacker_current_weapon,   
     attacker_weapon_1,        
     attacker_weapon_2,        
@@ -130,7 +122,6 @@ INSERT INTO kill_data (
     attacker_offhand_weapon_2,
     attacker_titan,            
     attacker_x,               
-
     attacker_y,               
     attacker_z,               
     victim_name,               
@@ -139,7 +130,6 @@ INSERT INTO kill_data (
     victim_weapon_1,          
     victim_weapon_2,          
     victim_weapon_3,          
-
     victim_offhand_weapon_1,   
     victim_offhand_weapon_2,   
     victim_titan,             
@@ -250,7 +240,6 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.Map,
 		k.AttackerName,
 		k.AttackerId,
-
 		k.AttackerCurrentWeapon,
 		k.AttackerWeapon1,
 		k.AttackerWeapon2,
@@ -259,7 +248,6 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.AttackerOffhandWeapon2,
 		k.AttackerTitan,
 		k.AttackerX,
-
 		k.AttackerY,
 		k.AttackerZ,
 		k.VictimName,
@@ -268,7 +256,6 @@ func dbInsertKillEvent(k KillEvent) error {
 		k.VictimWeapon1,
 		k.VictimWeapon2,
 		k.VictimWeapon3,
-
 		k.VictimOffhandWeapon1,
 		k.VictimOffhandWeapon2,
 		k.VictimTitan,

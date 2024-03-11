@@ -149,9 +149,22 @@ WITH server_kill_data AS (
     WHERE CASE WHEN ? = '' THEN 1
                ELSE server_id = ?
           END
-), ids AS (
-    SELECT attacker_name AS name, attacker_id AS uid FROM server_kill_data
+), attacker_ids AS (
+    SELECT attacker_name AS name,
+           attacker_id   AS uid
+    FROM server_kill_data
     WHERE ? IN (attacker_name, attacker_id)
+    LIMIT 1
+), victim_ids AS (
+    SELECT victim_name AS name,
+           victim_id   AS uid
+    FROM server_kill_data
+    WHERE ? IN (victim_name, victim_id)
+    LIMIT 1
+), ids AS (
+    SELECT * FROM attacker_ids
+    UNION
+    SELECT * FROM victim_ids
     LIMIT 1
 ), nkills AS (
     SELECT COUNT(1) FROM server_kill_data
@@ -166,7 +179,7 @@ SELECT (SELECT name FROM ids) AS name,
        (SELECT uid FROM ids) AS uid,
        (SELECT * FROM nkills) AS kills,
        (SELECT * FROM ndeaths) AS deaths,
-       (1.0*(SELECT * FROM nkills)) / (1.0*(SELECT * FROM ndeaths)) AS kd;`
+       (1.0*(SELECT * FROM nkills)) / (max(1.0*(SELECT * FROM ndeaths), 1.0)) AS kd;`
 
 type PlayerStatsSQLResult struct {
 	Name   sql.NullString
@@ -278,6 +291,7 @@ func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLRe
 		getPlayerStatsSQL,
 		serverID,
 		serverID,
+		playerNameOrUID,
 		playerNameOrUID,
 		playerNameOrUID,
 		playerNameOrUID,

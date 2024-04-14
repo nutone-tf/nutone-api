@@ -181,6 +181,22 @@ SELECT (SELECT name FROM ids) AS name,
        (SELECT * FROM ndeaths) AS deaths,
        (1.0*(SELECT * FROM nkills)) / (max(1.0*(SELECT * FROM ndeaths), 1.0)) AS kd;`
 
+const getPlayerStatsAllSQL string = `
+WITH kills AS (
+	SELECT attacker_name AS name, COUNT(1) AS kills
+	FROM kill_data WHERE attacker_name <> victim_name
+	GROUP BY attacker_name
+  ), deaths AS (
+	SELECT victim_name AS name, COUNT(1) AS deaths
+	FROM kill_data
+	GROUP BY victim_name
+  )
+  
+  SELECT k.name, k.kills, d.deaths
+  FROM kills k, deaths d
+  WHERE k.name = d.name
+`
+
 type PlayerStatsSQLResult struct {
 	Name   sql.NullString
 	UID    sql.NullString
@@ -392,64 +408,88 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 	serverID := r.URL.Query().Get("server_id")
 	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/players/")
-	ps := dbGetPlayerStats(serverID, playerNameOrUID)
-	// TODO: make ErrNoRows work
-	if !ps.Name.Valid {
-		w.WriteHeader(http.StatusNotFound)
-		return
+
+	if playerNameOrUID == "" {
+		dbMutex.Lock()
+		rows, err := db.Query(getPlayerStatsAllSQL)
+		if err != nil {
+			log.Print(err)
+			return
+		}
+		resp := make([]map[string]interface{}, 1, 1)
+		var counter int
+		for rows.Next() {
+			counter++
+			var ps PlayerStatsSQLResult
+			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
+			resp[counter]["name"] = ps.Name.String
+			resp[counter]["kills"] = ps.Kills
+			resp[counter]["deaths"] = ps.Deaths
+		}
+		w.Header().Set("Content-Type", "application/json")
+		jsonResp, _ := json.Marshal(resp)
+		w.Write(jsonResp)
+	} else {
+		ps := dbGetPlayerStats(serverID, playerNameOrUID)
+		// TODO: make ErrNoRows work
+		if !ps.Name.Valid {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		resp := make(map[string]interface{})
+		resp["name"] = ps.Name.String
+		resp["uid"] = ps.UID.String
+		resp["kills"] = ps.Kills
+		resp["deaths"] = ps.Deaths
+		resp["kd"] = ps.KD.Float64
+
+		sendJSONResponse(w, resp)
 	}
-
-	resp := make(map[string]interface{})
-	resp["name"] = ps.Name.String
-	resp["uid"] = ps.UID.String
-	resp["kills"] = ps.Kills
-	resp["deaths"] = ps.Deaths
-	resp["kd"] = ps.KD.Float64
-
-	sendJSONResponse(w, resp)
 }
 
-// {
-//     "name": "fvnkhead",
-//     "uid": "1234",
-//     "total": {
-//         "kills": 10,
-//         "deaths": 5,
-//         "kd": 2.0
-//     },
-//     "servers": [
-//         {
-//             "name": "fvnkhead's sticks",
-//             "id": "fvnkhead_sticks", # server_id to be added into convars later
-//             "kills": 5,
-//             "deaths": 0,
-//             "kd": 5.0 # if deaths = 0, calculate kd as if 1
-//         }, {
-//         "name": "fvnkhead's 8v8",
-//         "id": "fvnkhead_big_pvp",
-//         "kills": 5,
-//         "deaths": 5,
-//         "kd": 1.0
-//         }
-//     ]
-// }
+//	{
+//	    "name": "fvnkhead",
+//	    "uid": "1234",
+//	    "total": {
+//	        "kills": 10,
+//	        "deaths": 5,
+//	        "kd": 2.0
+//	    },
+//	    "servers": [
+//	        {
+//	            "name": "fvnkhead's sticks",
+//	            "id": "fvnkhead_sticks", # server_id to be added into convars later
+//	            "kills": 5,
+//	            "deaths": 0,
+//	            "kd": 5.0 # if deaths = 0, calculate kd as if 1
+//	        }, {
+//	        "name": "fvnkhead's 8v8",
+//	        "id": "fvnkhead_big_pvp",
+//	        "kills": 5,
+//	        "deaths": 5,
+//	        "kd": 1.0
+//	        }
+//	    ]
+//	}
+//
 // GET /players # returns all players
 // GET /players/<playername> # returns object like in A
 // GET /servers # returns all servers
 // GET /servers/<server_id>, e.g. `GET /servers/fvnkhead%27s%20sticks` (can use either URL-encoded server name or server_id) =>
-// {
-//       "name": "fvnkhead's sticks",
-//       "id": "fvnkhead_sticks",
-//       "players" [
-//         {
-//          "name": "fvnkhead",
-//          "uid": "1234",
-//           ...
-//         },
-//       ..
-//       ]
-// }
 //
+//	{
+//	      "name": "fvnkhead's sticks",
+//	      "id": "fvnkhead_sticks",
+//	      "players" [
+//	        {
+//	         "name": "fvnkhead",
+//	         "uid": "1234",
+//	          ...
+//	        },
+//	      ..
+//	      ]
+//	}
 func main() {
 	var isTestFlag = flag.Bool("t", false, "enable test mode (bypasses token authentication)")
 	var portFlag = flag.Int("p", 8080, "port to listen for HTTP requests")

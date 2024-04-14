@@ -416,7 +416,11 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
-		resp := make([]map[string]interface{}, 100000, 100000)
+		var rowAmount int
+		for rows.Next() {
+			rowAmount++
+		}
+		resp := make([]map[string]interface{}, rowAmount, rowAmount)
 		var counter int
 		for rows.Next() {
 			var ps PlayerStatsSQLResult

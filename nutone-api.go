@@ -418,7 +418,6 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 	playerNameOrUID := strings.TrimPrefix(r.URL.Path, "/players/")
 
 	if playerNameOrUID == "" {
-		dbMutex.Lock()
 		rows, err := db.Query(getPlayerStatsAllSQL)
 		if err != nil {
 			log.Print(err)

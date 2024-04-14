@@ -416,12 +416,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
-		rowsForCounting := rows
-		var rowAmount int
-		for rowsForCounting.Next() {
-			rowAmount++
-		}
-		resp := make([]map[string]interface{}, rowAmount, rowAmount)
+		resp := make([]map[string]interface{}, 0)
 		var counter int
 		for rows.Next() {
 			var ps PlayerStatsSQLResult

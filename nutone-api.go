@@ -333,14 +333,6 @@ func logRequest(r *http.Request) {
 	log.Printf("%s: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 }
 
-func countRows(rows *sql.Rows) int {
-	var counter int
-	for rows.Next() {
-		counter++
-	}
-	return counter
-}
-
 func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonResp, _ := json.Marshal(resp)

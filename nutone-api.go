@@ -423,23 +423,15 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
-		resp := make([]map[string]interface{}, countRows(rows))
-		rows, err = db.Query(getPlayerStatsAllSQL)
-		var counter int
 		for rows.Next() {
+			resp := make(map[string]interface{})
 			var ps PlayerStatsSQLResult
-			if resp[counter] == nil {
-				resp[counter] = make(map[string]interface{})
-			}
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
-			resp[counter]["name"] = ps.Name.String
-			resp[counter]["kills"] = ps.Kills
-			resp[counter]["deaths"] = ps.Deaths
-			counter++
+			resp["name"] = ps.Name.String
+			resp["kills"] = ps.Kills
+			resp["deaths"] = ps.Deaths
+			sendJSONResponse(w, resp)
 		}
-		w.Header().Set("Content-Type", "application/json")
-		jsonResp, _ := json.Marshal(resp)
-		w.Write(jsonResp)
 	} else {
 		ps := dbGetPlayerStats(serverID, playerNameOrUID)
 		// TODO: make ErrNoRows work

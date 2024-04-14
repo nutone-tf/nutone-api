@@ -333,6 +333,14 @@ func logRequest(r *http.Request) {
 	log.Printf("%s: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 }
 
+func countRows(rows *sql.Rows) int {
+	var counter int
+	for rows.Next() {
+		counter++
+	}
+	return counter
+}
+
 func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonResp, _ := json.Marshal(resp)
@@ -416,7 +424,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
-		resp := make([]map[string]interface{}, 0)
+		resp := make([]map[string]interface{}, countRows(rows))
 		var counter int
 		for rows.Next() {
 			var ps PlayerStatsSQLResult

@@ -183,7 +183,7 @@ SELECT (SELECT name FROM ids) AS name,
 
 const getPlayerStatsAllSQL string = `
 WITH kills AS (
-	SELECT attacker_name AS name, COUNT(1) AS kills
+	SELECT attacker_name AS name, attacker_id AS uid, COUNT(1) AS kills
 	FROM kill_data WHERE attacker_name <> victim_name
 	GROUP BY attacker_name
   ), deaths AS (
@@ -192,7 +192,7 @@ WITH kills AS (
 	GROUP BY victim_name
   )
   
-  SELECT k.name, k.kills, d.deaths
+  SELECT k.name, k.uid, k.kills, d.deaths
   FROM kills k, deaths d
   WHERE k.name = d.name
 `

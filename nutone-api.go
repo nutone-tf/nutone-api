@@ -425,6 +425,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resp := make([]map[string]interface{}, countRows(rows))
+		rows, err = db.Query(getPlayerStatsAllSQL)
 		var counter int
 		for rows.Next() {
 			var ps PlayerStatsSQLResult

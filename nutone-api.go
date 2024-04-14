@@ -419,12 +419,15 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		resp := make([]map[string]interface{}, 1, 1)
 		var counter int
 		for rows.Next() {
-			counter++
 			var ps PlayerStatsSQLResult
+			if resp[counter] == nil {
+				resp[counter] = make(map[string]interface{})
+			}
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
 			resp[counter]["name"] = ps.Name.String
 			resp[counter]["kills"] = ps.Kills
 			resp[counter]["deaths"] = ps.Deaths
+			counter++
 		}
 		w.Header().Set("Content-Type", "application/json")
 		jsonResp, _ := json.Marshal(resp)

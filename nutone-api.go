@@ -339,7 +339,7 @@ func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
 	w.Write(jsonResp)
 }
 
-func sendJSONResponseArray(w http.ResponseWriter, arr []PlayerStatsSQLResult) {
+func sendJSONResponseArray(w http.ResponseWriter, arr []map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonResp, _ := json.Marshal(arr)
 	w.Write(jsonResp)
@@ -421,7 +421,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
-		var arr []PlayerStatsSQLResult
+		var arr []map[string]interface{}
 		for rows.Next() {
 			resp := make(map[string]interface{})
 			var ps PlayerStatsSQLResult
@@ -429,7 +429,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			resp["name"] = ps.Name.String
 			resp["kills"] = ps.Kills
 			resp["deaths"] = ps.Deaths
-			arr = append(arr, ps)
+			arr = append(arr, resp)
 		}
 		sendJSONResponseArray(w, arr)
 

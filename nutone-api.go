@@ -339,6 +339,12 @@ func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
 	w.Write(jsonResp)
 }
 
+func sendJSONResponseArray(w http.ResponseWriter, arr []PlayerStatsSQLResult) {
+	w.Header().Set("Content-Type", "application/json")
+	jsonResp, _ := json.Marshal(arr)
+	w.Write(jsonResp)
+}
+
 func isValidRequest(r *http.Request) bool {
 	if isTest {
 		return true
@@ -415,6 +421,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err)
 			return
 		}
+		var arr []PlayerStatsSQLResult
 		for rows.Next() {
 			resp := make(map[string]interface{})
 			var ps PlayerStatsSQLResult
@@ -422,8 +429,10 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			resp["name"] = ps.Name.String
 			resp["kills"] = ps.Kills
 			resp["deaths"] = ps.Deaths
-			sendJSONResponse(w, resp)
+			arr = append(arr, ps)
 		}
+		sendJSONResponseArray(w, arr)
+
 	} else {
 		ps := dbGetPlayerStats(serverID, playerNameOrUID)
 		// TODO: make ErrNoRows work

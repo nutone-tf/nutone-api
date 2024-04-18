@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/rs/cors"
+	"github.com/rs/cors"
 	_ "rsc.io/sqlite"
 )
 

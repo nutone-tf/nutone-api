@@ -336,12 +336,14 @@ func logRequest(r *http.Request) {
 
 func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Content-Allow-Origin", "*")
 	jsonResp, _ := json.Marshal(resp)
 	w.Write(jsonResp)
 }
 
 func sendJSONResponseArray(w http.ResponseWriter, arr []map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Content-Allow-Origin", "*")
 	jsonResp, _ := json.Marshal(arr)
 	w.Write(jsonResp)
 }

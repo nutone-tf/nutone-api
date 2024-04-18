@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	_ "github.com/rs/cors"
 	_ "rsc.io/sqlite"
 )
 
@@ -334,18 +335,13 @@ func logRequest(r *http.Request) {
 }
 
 func sendJSONResponse(w http.ResponseWriter, resp map[string]interface{}) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Accept", "*/*")
 	jsonResp, _ := json.Marshal(resp)
 	w.Write(jsonResp)
 }
 
 func sendJSONResponseArray(w http.ResponseWriter, arr []map[string]interface{}) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Accept", "*/*")
 	jsonResp, _ := json.Marshal(arr)
 	w.Write(jsonResp)
 }
@@ -517,10 +513,13 @@ func main() {
 
 	dbInit()
 
+	mux := http.NewServeMux()
+	corsHandler := cors.Default().Handler(mux)
+
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/players/", playerHandler)
 
 	host := fmt.Sprintf(":%d", *portFlag)
-	http.ListenAndServe(host, nil)
+	http.ListenAndServe(host, corsHandler)
 }

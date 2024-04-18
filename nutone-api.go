@@ -430,9 +430,9 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			resp := make(map[string]interface{})
 			var ps PlayerStatsSQLResult
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
-			resp["name"] = ps.Name.String
-			resp["kills"] = ps.Kills
 			resp["deaths"] = ps.Deaths
+			resp["kills"] = ps.Kills
+			resp["name"] = ps.Name.String
 			arr = append(arr, resp)
 		}
 		sendJSONResponseArray(w, arr)

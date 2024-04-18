@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rs/cors"
 	_ "rsc.io/sqlite"
 )
 
@@ -515,13 +514,10 @@ func main() {
 
 	dbInit()
 
-	mux := http.NewServeMux()
-	corsHandler := cors.Default().Handler(mux)
-
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/players/", playerHandler)
 
 	host := fmt.Sprintf(":%d", *portFlag)
-	http.ListenAndServe(host, corsHandler)
+	http.ListenAndServe(host, nil)
 }

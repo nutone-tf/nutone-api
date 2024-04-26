@@ -9,7 +9,6 @@
 
 ## TODO
 
-  * locking issues
   * server-specific stats
   * players stats when kills = 0
   * top player query

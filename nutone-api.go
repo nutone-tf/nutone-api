@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS tokens (
     owner TEXT
 );`
 
+const createUIDTableSQL string = `
+CREATE TABLE IF NOT EXISTS uids (
+	uid TEXT,
+	name TEXT,
+	timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (uid, name)
+);`
+
 const createKillDataTableSQL string = `
 CREATE TABLE IF NOT EXISTS kill_data (
     timestamp                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

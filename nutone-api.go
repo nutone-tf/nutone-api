@@ -224,6 +224,11 @@ func dbInit() {
 		log.Fatal(err)
 	}
 
+	_, err = db.Exec(createUIDTableSQL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for _, indexSQL := range indexSQLs {
 		_, err = db.Exec(indexSQL)
 		if err != nil {

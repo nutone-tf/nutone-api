@@ -205,12 +205,48 @@ WITH kills AS (
   WHERE k.name = d.name
 `
 
+const getServerStatsSQL string = `
+WITH server_kill_data AS (
+	SELECT * FROM kill_data WHERE ? IN (server_name, server_id)
+), kills AS (
+	SELECT attacker_name AS name, COUNT(1) AS kills
+	FROM server_kill_data WHERE attacker_name <> victim_name
+), deaths AS (
+	SELECT victim_name AS name, COUNT(1) AS deaths
+	FROM server_kill_data
+)
+
+SELECT DISTINCT s.server_name, s.server_id, k.kills, d.deaths
+FROM server_kill_data s, kills k, deaths d
+`
+
+const getServerStatsAllSQL string = `
+WITH kills AS (
+	SELECT attacker_name AS name, COUNT(1) AS kills
+	FROM kill_data WHERE attacker_name <> victim_name
+), deaths AS (
+	SELECT victim_name AS name, COUNT(1) AS deaths
+	FROM kill_data
+)
+
+SELECT DISTINCT s.server_name, s.server_id, k.kills, d.deaths
+FROM kill_data s, kills k, deaths d
+`
+
 type PlayerStatsSQLResult struct {
 	Name   sql.NullString
 	UID    sql.NullString
 	Kills  int
 	Deaths int
 	KD     sql.NullFloat64
+}
+
+type ServerStatsSQLResult struct {
+	Server_name sql.NullString
+	Server_ID   sql.NullString
+	Kills       int
+	Deaths      int
+	Players     map[PlayerStatsSQLResult]interface{}
 }
 
 func dbInit() {
@@ -342,6 +378,31 @@ func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLRe
 	return &ps
 }
 
+func dbGetServerStats(serverNameOrID string) *ServerStatsSQLResult {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
+	var ss ServerStatsSQLResult
+	row := db.QueryRow(
+		getServerStatsSQL,
+		serverNameOrID,
+	)
+
+	err := row.Scan(&ss.Server_name, &ss.Server_ID, &ss.Kills, &ss.Deaths)
+
+	if err == sql.ErrNoRows {
+		log.Print("no rows found")
+		return nil
+	}
+
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+
+	return &ss
+}
+
 func logRequest(r *http.Request) {
 	log.Printf("%s: %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 }
@@ -467,6 +528,46 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serverHandler(w http.ResponseWriter, r *http.Request) {
+	logRequest(r)
+
+	serverNameOrID := strings.TrimPrefix(r.URL.Path, "/servers/")
+
+	if serverNameOrID == "" {
+		rows, err := db.Query(getServerStatsAllSQL)
+		if err != nil {
+			log.Print(err)
+			return
+		}
+		var arr []map[string]interface{}
+		for rows.Next() {
+			resp := make(map[string]interface{})
+			var ss ServerStatsSQLResult
+			rows.Scan(&ss.Server_name, &ss.Server_ID, &ss.Kills, &ss.Deaths)
+			resp["deaths"] = ss.Deaths
+			resp["kills"] = ss.Kills
+			resp["id"] = ss.Server_ID.String
+			resp["name"] = ss.Server_name.String
+			arr = append(arr, resp)
+		}
+		sendJSONResponseArray(w, arr)
+	} else {
+		ss := dbGetServerStats(serverNameOrID)
+		if !ss.Server_name.Valid {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		resp := make(map[string]interface{})
+		resp["name"] = ss.Server_name.String
+		resp["id"] = ss.Server_ID.String
+		resp["kills"] = ss.Kills
+		resp["deaths"] = ss.Deaths
+
+		sendJSONResponse(w, resp)
+	}
+}
+
 //	{
 //	    "name": "fvnkhead",
 //	    "uid": "1234",
@@ -530,6 +631,7 @@ func main() {
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/players/", playerHandler)
+	http.HandleFunc("/servers/", serverHandler)
 
 	host := fmt.Sprintf(":%d", *portFlag)
 	http.ListenAndServe(host, nil)

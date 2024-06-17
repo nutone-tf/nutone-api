@@ -231,7 +231,7 @@ WITH kills AS (
 
 SELECT DISTINCT s.server_name, s.server_id, k.kills, d.deaths
 FROM kill_data s, kills k, deaths d
-WHERE (s.server_id = k.server_id) AND (s.server_id = d.server_id)
+WHERE (s.server_id = k.id) AND (s.server_id = d.id)
 `
 
 type PlayerStatsSQLResult struct {

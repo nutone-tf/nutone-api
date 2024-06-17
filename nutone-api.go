@@ -222,16 +222,18 @@ FROM server_kill_data s, kills k, deaths d
 
 const getServerStatsAllSQL string = `
 WITH kills AS (
-	SELECT attacker_name AS name, COUNT(1) AS kills, server_id AS id
+	SELECT server_id AS id, COUNT(1) AS kills
 	FROM kill_data WHERE attacker_name <> victim_name
-), deaths AS (
-	SELECT victim_name AS name, COUNT(1) AS deaths, server_id AS id
+	GROUP BY server_id
+  ), deaths AS (
+	SELECT server_id AS id, COUNT(1) AS deaths
 	FROM kill_data
-)
-
-SELECT DISTINCT s.server_name, s.server_id, k.kills, d.deaths
-FROM kill_data s, kills k, deaths d
-WHERE (s.server_id = k.id) AND (s.server_id = d.id)
+	GROUP BY server_id
+  )
+  
+  SELECT k.id, k.kills, d.deaths
+  FROM kills k, deaths d
+  WHERE k.id = d.id
 `
 
 type PlayerStatsSQLResult struct {

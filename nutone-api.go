@@ -433,8 +433,8 @@ func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLRe
 	return &ps
 }
 
-func dbGetPlayerAlias(playerNameOrUID string) []string {
-	var pa []string
+func dbGetPlayerAlias(playerNameOrUID string) []sql.NullString {
+	var pa []sql.NullString
 	rows, err := db.Query(
 		getPlayerAlias,
 		playerNameOrUID,
@@ -451,7 +451,7 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	}
 
 	for rows.Next() {
-		var name string
+		var name sql.NullString
 		rows.Scan(name)
 		pa = append(pa, name)
 	}

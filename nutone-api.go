@@ -155,10 +155,6 @@ const insertUIDsSQL string = `
 INSERT OR REPLACE INTO uids (
 	name,
 	uid
-) VALUES (?, ?);
-INSERT OR REPLACE INTO uids (
-	name,
-	uid
 ) VALUES (?, ?);`
 
 const getPlayerStatsSQL string = `
@@ -360,7 +356,7 @@ func dbInsertKillEvent(k KillEvent) error {
 	return err
 }
 
-func dbInsertUIDs(k KillEvent) error {
+func dbInsertAttackerUIDs(k KillEvent) error {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 
@@ -375,6 +371,24 @@ func dbInsertUIDs(k KillEvent) error {
 	_, err = statement.Exec(
 		k.AttackerName,
 		k.AttackerId,
+	)
+
+	return err
+}
+
+func dbInsertVictimUIDs(k KillEvent) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
+	statement, err := db.Prepare(insertUIDsSQL)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	defer statement.Close()
+
+	_, err = statement.Exec(
 		k.VictimName,
 		k.VictimId,
 	)
@@ -517,7 +531,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dbInsertUIDs(killEvent)
+	err = dbInsertAttackerUIDs(killEvent)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	err = dbInsertVictimUIDs(killEvent)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "database error", http.StatusInternalServerError)

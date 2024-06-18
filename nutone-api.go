@@ -438,7 +438,6 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	rows, err := db.Query(
 		getPlayerAlias,
 		playerNameOrUID,
-		playerNameOrUID,
 	)
 
 	if err == sql.ErrNoRows {
@@ -462,7 +461,6 @@ func dbGetCurrentName(playerNameOrUID string) string {
 	var name sql.NullString
 	row := db.QueryRow(
 		getPlayerAlias,
-		playerNameOrUID,
 		playerNameOrUID,
 	)
 

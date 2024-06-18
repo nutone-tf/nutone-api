@@ -434,6 +434,8 @@ func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLRe
 }
 
 func dbGetPlayerAlias(playerNameOrUID string) []string {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
 	var pa []string
 	rows, err := db.Query(
 		getPlayerAlias,
@@ -458,6 +460,8 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 }
 
 func dbGetCurrentName(playerNameOrUID string) string {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
 	var name sql.NullString
 	row := db.QueryRow(
 		getPlayerAlias,

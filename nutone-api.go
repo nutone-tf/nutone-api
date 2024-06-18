@@ -211,6 +211,12 @@ WITH kills AS (
   WHERE k.name = d.name
 `
 
+const getPlayerAlias string = `
+	SELECT name FROM uids
+	WHERE uid = (SELECT uid FROM uids WHERE ? IN (name, uid))
+	AND name != ?;
+`
+
 const getServerStatsSQL string = `
 WITH server_kill_data AS (
 	SELECT * FROM kill_data WHERE ? IN (server_name, server_id)
@@ -427,6 +433,31 @@ func dbGetPlayerStats(serverID string, playerNameOrUID string) *PlayerStatsSQLRe
 	return &ps
 }
 
+func dbGetPlayerAlias(playerNameOrUID string) []string {
+	var pa []string
+	rows, err := db.Query(
+		getPlayerAlias,
+		playerNameOrUID,
+		playerNameOrUID,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
+	if err != nil {
+		log.Print(err)
+		return nil
+	}
+
+	for rows.Next() {
+		var name string
+		rows.Scan(name)
+		pa = append(pa, name)
+	}
+	return pa
+}
+
 func dbGetServerStats(serverNameOrID string) *ServerStatsSQLResult {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
@@ -588,6 +619,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		total["deaths"] = ps.Deaths
 		total["kd"] = ps.KD.Float64
 		resp["total"] = total
+		resp["aliases"] = dbGetPlayerAlias(playerNameOrUID)
 
 		sendJSONResponse(w, resp)
 	}

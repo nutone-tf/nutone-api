@@ -214,7 +214,8 @@ WITH kills AS (
 const getPlayerAlias string = `
 	SELECT name FROM uids
 	WHERE uid = (SELECT uid FROM uids WHERE ? IN (name, uid))
-	AND name != ?;
+	AND name != ?
+	ORDER BY timestamp DESC;
 `
 
 const getServerStatsSQL string = `

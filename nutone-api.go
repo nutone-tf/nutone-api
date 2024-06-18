@@ -521,11 +521,13 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resp := make(map[string]interface{})
+		total := make(map[string]interface{})
 		resp["name"] = ps.Name.String
 		resp["uid"] = ps.UID.String
-		resp["kills"] = ps.Kills
-		resp["deaths"] = ps.Deaths
-		resp["kd"] = ps.KD.Float64
+		total["kills"] = ps.Kills
+		total["deaths"] = ps.Deaths
+		total["kd"] = ps.KD.Float64
+		resp["total"] = total
 
 		sendJSONResponse(w, resp)
 	}

@@ -214,7 +214,6 @@ WITH kills AS (
 const getPlayerAlias string = `
 	SELECT name FROM uids
 	WHERE uid = (SELECT uid FROM uids WHERE ? IN (name, uid))
-	AND name != ?
 	ORDER BY timestamp DESC;
 `
 
@@ -459,6 +458,28 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	return pa
 }
 
+func dbGetCurrentName(playerNameOrUID string) string {
+	var name sql.NullString
+	row := db.QueryRow(
+		getPlayerAlias,
+		playerNameOrUID,
+		playerNameOrUID,
+	)
+
+	err := row.Scan(&name)
+
+	if err == sql.ErrNoRows {
+		return "" //this shouldn't happen
+	}
+
+	if err != nil {
+		log.Print(err)
+		return ""
+	}
+
+	return name.String
+}
+
 func dbGetServerStats(serverNameOrID string) *ServerStatsSQLResult {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
@@ -614,7 +635,7 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 		resp := make(map[string]interface{})
 		total := make(map[string]interface{})
-		resp["name"] = ps.Name.String
+		resp["name"] = dbGetCurrentName(playerNameOrUID)
 		resp["uid"] = ps.UID.String
 		total["kills"] = ps.Kills
 		total["deaths"] = ps.Deaths

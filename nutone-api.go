@@ -452,7 +452,7 @@ func dbGetPlayerAlias(playerNameOrUID string) []sql.NullString {
 
 	for rows.Next() {
 		var name sql.NullString
-		rows.Scan(name)
+		rows.Scan(&name)
 		pa = append(pa, name)
 	}
 	return pa

@@ -627,12 +627,17 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		var arr []map[string]interface{}
 		for rows.Next() {
-			resp := make(map[string]interface{})
 			var ps PlayerStatsSQLResult
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
-			resp["deaths"] = ps.Deaths
-			resp["kills"] = ps.Kills
-			resp["name"] = ps.Name.String
+			resp := make(map[string]interface{})
+			currentName := dbGetCurrentName(ps.Name.String)
+			if ps.Name.String != currentName {
+				resp["isAliasOf"] = currentName
+			} else {
+				resp["name"] = ps.Name.String
+				resp["kills"] = ps.Kills
+				resp["deaths"] = ps.Deaths
+			}
 			arr = append(arr, resp)
 		}
 		sendJSONResponseArray(w, arr)

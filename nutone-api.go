@@ -208,7 +208,6 @@ WITH kills AS (
 	SELECT * FROM (
 	SELECT name, uid FROM uids
 	ORDER BY timestamp DESC)
-	GROUP BY uid
   )
   
   SELECT n.name, k.kills, d.deaths

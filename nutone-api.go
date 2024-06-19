@@ -633,6 +633,10 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			resp["deaths"] = ps.Deaths
 			resp["kills"] = ps.Kills
 			resp["name"] = ps.Name.String
+			aliases := dbGetPlayerAlias(ps.Name.String)
+			if len(aliases) != 0 {
+				resp["aliases"] = aliases
+			}
 			arr = append(arr, resp)
 		}
 		sendJSONResponseArray(w, arr)
@@ -647,14 +651,13 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 		resp := make(map[string]interface{})
 		total := make(map[string]interface{})
-		var aliases []string
 		resp["name"] = dbGetCurrentName(playerNameOrUID)
 		resp["uid"] = ps.UID.String
 		total["kills"] = ps.Kills
 		total["deaths"] = ps.Deaths
 		total["kd"] = ps.KD.Float64
 		resp["total"] = total
-		aliases = dbGetPlayerAlias(playerNameOrUID)
+		aliases := dbGetPlayerAlias(playerNameOrUID)
 		if len(aliases) != 0 {
 			resp["aliases"] = aliases
 		}

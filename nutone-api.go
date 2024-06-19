@@ -197,18 +197,23 @@ SELECT (SELECT name FROM ids) AS name,
 
 const getPlayerStatsAllSQL string = `
 WITH kills AS (
-	SELECT attacker_name AS name, COUNT(1) AS kills
-	FROM kill_data WHERE attacker_name <> victim_name
-	GROUP BY attacker_name
+	SELECT attacker_id AS uid, COUNT(1) AS kills
+	FROM kill_data WHERE attacker_id <> victim_id
+	GROUP BY attacker_id
   ), deaths AS (
-	SELECT victim_name AS name, COUNT(1) AS deaths
+	SELECT victim_id AS uid, COUNT(1) AS deaths
 	FROM kill_data
-	GROUP BY victim_name
+	GROUP BY victim_id
+  ), names AS (
+	SELECT * FROM (
+	SELECT name, uid FROM uids
+	ORDER BY timestamp DESC)
+	GROUP BY uid
   )
   
-  SELECT k.name, k.kills, d.deaths
-  FROM kills k, deaths d
-  WHERE k.name = d.name
+  SELECT n.name, k.kills, d.deaths
+  FROM names n, kills k, deaths d
+  WHERE n.uid = k.uid AND n.uid = d.uid
 `
 
 const getPlayerAlias string = `

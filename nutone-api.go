@@ -630,10 +630,10 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
 			resp := make(map[string]interface{})
 			currentName := dbGetCurrentName(ps.Name.String)
+			resp["name"] = ps.Name.String
 			if ps.Name.String != currentName {
 				resp["isAliasOf"] = currentName
 			} else {
-				resp["name"] = ps.Name.String
 				resp["kills"] = ps.Kills
 				resp["deaths"] = ps.Deaths
 			}

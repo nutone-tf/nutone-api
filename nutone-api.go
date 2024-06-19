@@ -454,7 +454,11 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	for rows.Next() {
 		var name sql.NullString
 		rows.Scan(&name)
-		pa = append(pa, name.String)
+		if name.String == playerNameOrUID {
+			continue
+		} else {
+			pa = append(pa, name.String)
+		}
 	}
 	return pa
 }
@@ -637,13 +641,17 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 
 		resp := make(map[string]interface{})
 		total := make(map[string]interface{})
+		var aliases []string
 		resp["name"] = dbGetCurrentName(playerNameOrUID)
 		resp["uid"] = ps.UID.String
 		total["kills"] = ps.Kills
 		total["deaths"] = ps.Deaths
 		total["kd"] = ps.KD.Float64
 		resp["total"] = total
-		resp["aliases"] = dbGetPlayerAlias(playerNameOrUID)
+		aliases = dbGetPlayerAlias(playerNameOrUID)
+		if len(aliases) != 0 {
+			resp["aliases"] = aliases
+		}
 
 		sendJSONResponse(w, resp)
 	}

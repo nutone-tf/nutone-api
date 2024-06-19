@@ -437,6 +437,7 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 	var pa []string
+	currentName := dbGetCurrentName(playerNameOrUID)
 	rows, err := db.Query(
 		getPlayerAlias,
 		playerNameOrUID,
@@ -454,7 +455,7 @@ func dbGetPlayerAlias(playerNameOrUID string) []string {
 	for rows.Next() {
 		var name sql.NullString
 		rows.Scan(&name)
-		if name.String == playerNameOrUID {
+		if name.String == currentName {
 			continue
 		} else {
 			pa = append(pa, name.String)

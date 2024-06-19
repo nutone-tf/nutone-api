@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"unicode"
 
 	_ "rsc.io/sqlite"
 )
@@ -210,7 +211,7 @@ WITH kills AS (
 	ORDER BY timestamp DESC)
   )
   
-  SELECT n.name, k.kills, d.deaths
+  SELECT group_concat(n.name), k.kills, d.deaths
   FROM names n, kills k, deaths d
   WHERE n.uid = k.uid AND n.uid = d.uid
 `
@@ -628,11 +629,17 @@ func playerHandler(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var ps PlayerStatsSQLResult
 			rows.Scan(&ps.Name, &ps.Kills, &ps.Deaths)
+			f := func(c rune) bool {
+				return !unicode.IsLetter(c) && !unicode.IsNumber(c) && !unicode.IsSpace(c) //this one for Gromit%20%20%20%20%20
+			}
+			aliases := strings.FieldsFunc(ps.Name.String, f)
 			resp := make(map[string]interface{})
-			resp["name"] = ps.Name.String
+			resp["name"] = aliases[0]
 			resp["kills"] = ps.Kills
 			resp["deaths"] = ps.Deaths
-
+			if len(aliases) > 1 {
+				resp["aliases"] = aliases
+			}
 			arr = append(arr, resp)
 		}
 		sendJSONResponseArray(w, arr)

@@ -1,0 +1,21 @@
+.{
+    .name = .nutoneapi,
+    .version = "0.0.0",
+    .fingerprint = 0xf2357db64bd7066,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{
+        .zqlite = .{
+            .url = "git+https://github.com/karlseguin/zqlite.zig?ref=master#ee7799b5bf138444986396966fb5f82c890a432b",
+            .hash = "zqlite-0.0.0-RWLaYxJ_lQBh1RLy13q2qJd5W8R6stUnMiARabnK6OnX",
+        },
+        .httpz = .{
+            .url = "git+https://github.com/karlseguin/http.zig?ref=master#6afc7a5854c202438c372d940851c999dbe4ce75",
+            .hash = "httpz-0.0.0-PNVzrMG3BgC2nAeXR0VFONPZgaOJ9TpAjanNn5zl9D9c",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

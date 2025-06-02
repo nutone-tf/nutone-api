@@ -89,22 +89,38 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
         if (parsedData) |pD| {
             const data = pD.value;
-            try conn.exec(
+            conn.exec(
                 "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token == ?3 limit 1))",
                 .{ data.server_id, data.server_name, serverToken },
-            );
-            try conn.exec(
+            ) catch {
+                res.status = 500;
+                res.body = "Internal server error.";
+                return;
+            };
+            conn.exec(
                 "insert or replace into players (uid, name) values (?1, ?2), (?3, ?4)",
                 .{ data.attacker_uid, data.attacker_name, data.victim_uid, data.victim_name },
-            );
-            try conn.exec(
+            ) catch {
+                res.status = 500;
+                res.body = "Internal server error.";
+                return;
+            };
+            conn.exec(
                 "insert or ignore into matches (match_id, server_id, game_mode, map) values (?1, ?2, ?3, ?4)",
                 .{ data.match_id, data.server_id, data.game_mode, data.map },
-            );
-            try conn.exec(
+            ) catch {
+                res.status = 500;
+                res.body = "Internal server error.";
+                return;
+            };
+            conn.exec(
                 "insert into kill_data (match_id, server_id, game_time, attacker_uid, attacker_weapon, attacker_titan, attacker_x, attacker_y, attacker_z, victim_uid, victim_weapon, victim_x, victim_y, victim_z, cause_of_death, distance) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
-            );
+            ) catch {
+                res.status = 500;
+                res.body = "Internal server error.";
+                return;
+            };
         }
         res.status = 200;
         res.body = "Successful";

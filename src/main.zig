@@ -90,7 +90,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         if (parsedData) |pD| {
             const data = pD.value;
             conn.exec(
-                "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token == ?3 limit 1))",
+                "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token = ?3 limit 1))",
                 .{ data.server_id, data.server_name, serverToken },
             ) catch {
                 res.status = 500;
@@ -134,7 +134,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
 
 fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
-        if (try conn.row("select owner from tokens where token == ?1", .{token})) |row| {
+        if (try conn.row("select owner from tokens where token = ?1", .{token})) |row| {
             defer row.deinit();
             return true;
         }
@@ -151,7 +151,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         var row: ?zqlite.Row = null;
         defer if (row) |r| r.deinit();
 
-        if (try conn.row("select uid from players where uid == ?1 or name == ?1 order by timestamp desc limit 1", .{id})) |r| {
+        if (try conn.row("select uid from players where uid = ?1 or name = ?1 order by timestamp desc limit 1", .{id})) |r| {
             row = r;
         }
 
@@ -160,7 +160,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
 
         if (uid) |player| {
-            var rows = try conn.rows("select name from players where uid == ?1 order by timestamp desc", .{player});
+            var rows = try conn.rows("select name from players where uid = ?1 order by timestamp desc", .{player});
             defer rows.deinit();
             if (rows.next()) |r| {
                 try writeStream.objectField("name");

@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const exe = b.addExecutable(.{
-        .name = "src",
+        .name = "nutone",
         .root_module = exe_mod,
     });
     exe.linkLibC();

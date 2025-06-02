@@ -44,7 +44,7 @@ pub fn main() !void {
     try initDB();
     var router = try server.router(.{});
     router.get("/v1/player/:id", getPlayerData, .{});
-    router.get("/v1/data", insertServerData, .{});
+    router.post("/v1/data", insertServerData, .{});
 
     try server.listen();
 }

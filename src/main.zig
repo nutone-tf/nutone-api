@@ -75,7 +75,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     defer if (parsedData) |pD| pD.deinit();
 
     if (try isValidServer(conn, req)) {
-        serverToken = req.header("Token").?;
+        serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = readKillData(allocator, kill) catch {
                 res.status = 418;
@@ -117,7 +117,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
 }
 
 fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
-    if (req.header("Token")) |token| {
+    if (req.header("token")) |token| {
         if (try conn.row("select owner from tokens where token == ?1", .{token})) |row| {
             defer row.deinit();
             return true;

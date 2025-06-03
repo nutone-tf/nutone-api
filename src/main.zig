@@ -209,7 +209,6 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         } else {
             res.status = 404;
             res.body = "Not Found";
-            return;
         }
     }
     try writeStream.endObject();

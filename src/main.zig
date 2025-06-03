@@ -219,7 +219,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.write(r.text(0));
                 try writeStream.objectField("kills");
                 try writeStream.write(r.int(1));
-                try writeStream.write("avg_distance");
+                try writeStream.objectField("avg_distance");
                 try writeStream.print("{d}", .{r.float(2)});
                 try writeStream.endObject();
             }

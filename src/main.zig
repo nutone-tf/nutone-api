@@ -78,8 +78,8 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = readKillData(allocator, kill) catch {
-                res.status = 418;
-                res.body = "I'm a Teapot";
+                res.status = 500;
+                res.body = "Internal server error";
                 return;
             };
         } else {
@@ -121,6 +121,10 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 res.body = "Internal server error.";
                 return;
             };
+        } else {
+            res.status = 418;
+            res.body = "I'm a Teapot";
+            return;
         }
         res.status = 200;
         res.body = "Successful";

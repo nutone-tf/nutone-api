@@ -151,6 +151,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var uid: ?[]const u8 = null;
     var writeStream = std.json.writeStream(res.writer(), .{});
     try writeStream.beginObject();
+    defer writeStream.deinit();
     if (req.param("id")) |id| {
         var row: ?zqlite.Row = null;
         defer if (row) |r| r.deinit();
@@ -169,6 +170,9 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (currentNameRow.next()) |r| {
                 try writeStream.objectField("name");
                 try writeStream.write(r.text(0));
+            } else {
+                res.status = 404;
+                res.body = "Not Found";
             }
             try writeStream.objectField("uid");
             try writeStream.write(player);

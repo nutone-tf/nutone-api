@@ -170,10 +170,6 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (currentNameRow.next()) |r| {
                 try writeStream.objectField("name");
                 try writeStream.write(r.text(0));
-            } else {
-                res.status = 404;
-                res.body = "Not Found";
-                return;
             }
             try writeStream.objectField("uid");
             try writeStream.write(player);
@@ -210,6 +206,10 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             } else {
                 try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
             }
+        } else {
+            res.status = 404;
+            res.body = "Not Found";
+            return;
         }
     }
     try writeStream.endObject();

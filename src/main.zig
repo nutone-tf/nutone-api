@@ -207,7 +207,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (deaths == 0) {
                 try writeStream.write(kills);
             } else {
-                try writeStream.write(kills / deaths);
+                try writeStream.write(@divExact(kills, deaths));
             }
         }
     }

@@ -207,6 +207,19 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             } else {
                 try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
             }
+
+            var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
+            defer weaponRow.deinit();
+
+            try writeStream.objectField("weapon_stats");
+            try writeStream.beginArray();
+            while (weaponRow.next()) |r| {
+                try writeStream.objectField("weapon");
+                try writeStream.write(r.text(0));
+                try writeStream.objectField("kills");
+                try writeStream.write(r.int(1));
+            }
+            try writeStream.endArray();
         } else {
             res.status = 404;
             res.body = "Not Found";

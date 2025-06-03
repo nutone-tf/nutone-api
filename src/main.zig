@@ -182,6 +182,33 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.write(r.text(0));
             }
             try writeStream.endArray();
+
+            const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_id <> victim_id", .{player});
+            var kills = 0;
+            defer if (currentKillsRow) |r| r.deinit();
+
+            const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
+            var deaths = 0;
+            defer if (currentDeathsRow) |r| r.deinit();
+
+            if (currentKillsRow) |r| {
+                kills = r.int(0);
+            }
+            if (currentDeathsRow) |r| {
+                deaths = r.int(0);
+            }
+
+            try writeStream.objectField("kills");
+            try writeStream.write(kills);
+            try writeStream.objectField("deaths");
+            try writeStream.write(deaths);
+
+            try writeStream.objectField("kd");
+            if (deaths == 0) {
+                try writeStream.write(kills);
+            } else {
+                try .writeStream.write(kills / deaths);
+            }
         }
     }
     try writeStream.endObject();

@@ -207,7 +207,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (deaths == 0) {
                 try writeStream.write(kills);
             } else {
-                try writeStream.write(@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths)));
+                try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
             }
         }
     }

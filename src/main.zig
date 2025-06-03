@@ -184,11 +184,11 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
 
             const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_id <> victim_id", .{player});
-            var kills = 0;
+            var kills: i64 = 0;
             defer if (currentKillsRow) |r| r.deinit();
 
             const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
-            var deaths = 0;
+            var deaths: i64 = 0;
             defer if (currentDeathsRow) |r| r.deinit();
 
             if (currentKillsRow) |r| {

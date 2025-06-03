@@ -208,7 +208,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
             }
 
-            var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
+            var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
             defer weaponRow.deinit();
 
             try writeStream.objectField("weapon_stats");
@@ -219,6 +219,8 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.write(r.text(0));
                 try writeStream.objectField("kills");
                 try writeStream.write(r.int(1));
+                try writeStream.write("avg_distance");
+                try writeStream.print("{d}", .{r.float(2)});
                 try writeStream.endObject();
             }
             try writeStream.endArray();

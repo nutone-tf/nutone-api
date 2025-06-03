@@ -164,9 +164,9 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
 
         if (uid) |player| {
-            var rows = try conn.rows("select name from players where uid = ?1 order by timestamp desc", .{player});
-            defer rows.deinit();
-            if (rows.next()) |r| {
+            var currentNameRow = try conn.rows("select name from players where uid = ?1 order by timestamp desc", .{player});
+            defer currentNameRow.deinit();
+            if (currentNameRow.next()) |r| {
                 try writeStream.objectField("name");
                 try writeStream.write(r.text(0));
             }
@@ -174,7 +174,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.write(player);
             try writeStream.objectField("aliases");
             try writeStream.beginArray();
-            while (rows.next()) |r| {
+            while (currentNameRow.next()) |r| {
                 try writeStream.write(r.text(0));
             }
             try writeStream.endArray();

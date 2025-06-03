@@ -78,8 +78,8 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = readKillData(allocator, kill) catch {
-                res.status = 500;
-                res.body = "Internal server error";
+                res.status = 400;
+                res.body = "Bad Request";
                 return;
             };
         } else {
@@ -94,7 +94,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.server_id, data.server_name, serverToken },
             ) catch {
                 res.status = 500;
-                res.body = "Internal server error.";
+                res.body = "Internal Server Error";
                 return;
             };
             conn.exec(
@@ -102,7 +102,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.attacker_uid, data.attacker_name, data.victim_uid, data.victim_name },
             ) catch {
                 res.status = 500;
-                res.body = "Internal server error.";
+                res.body = "Internal Server Error";
                 return;
             };
             conn.exec(
@@ -110,7 +110,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.match_id, data.server_id, data.game_mode, data.map },
             ) catch {
                 res.status = 500;
-                res.body = "Internal server error.";
+                res.body = "Internal Server Error";
                 return;
             };
             conn.exec(
@@ -118,7 +118,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
             ) catch {
                 res.status = 500;
-                res.body = "Internal server error.";
+                res.body = "Internal Server Error";
                 return;
             };
         } else {
@@ -127,11 +127,11 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
             return;
         }
         res.status = 200;
-        res.body = "Successful";
+        res.body = "OK";
         return;
     } else {
         res.status = 401;
-        res.body = "Unauthorized.";
+        res.body = "Unauthorized";
         return;
     }
 }

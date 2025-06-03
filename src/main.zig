@@ -150,7 +150,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var uid: ?[]const u8 = null;
     var writeStream = std.json.writeStream(res.writer(), .{});
-    try writeStream.beginObject();
+
     defer writeStream.deinit();
     if (req.param("id")) |id| {
         var row: ?zqlite.Row = null;
@@ -167,6 +167,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         if (uid) |player| {
             var currentNameRow = try conn.rows("select name from players where uid = ?1 order by timestamp desc", .{player});
             defer currentNameRow.deinit();
+            try writeStream.beginObject();
             if (currentNameRow.next()) |r| {
                 try writeStream.objectField("name");
                 try writeStream.write(r.text(0));

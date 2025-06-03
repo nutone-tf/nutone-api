@@ -184,18 +184,18 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
 
             const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_id <> victim_id", .{player});
-            var kills: i64 = 0;
+            var kills: f64 = 0;
             defer if (currentKillsRow) |r| r.deinit();
 
             const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
-            var deaths: i64 = 0;
+            var deaths: f64 = 0;
             defer if (currentDeathsRow) |r| r.deinit();
 
             if (currentKillsRow) |r| {
-                kills = r.int(0);
+                kills = r.float(0);
             }
             if (currentDeathsRow) |r| {
-                deaths = r.int(0);
+                deaths = r.float(0);
             }
 
             try writeStream.objectField("kills");
@@ -207,7 +207,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (deaths == 0) {
                 try writeStream.write(kills);
             } else {
-                try writeStream.write(@divExact(kills, deaths));
+                try writeStream.write(kills / deaths);
             }
         }
     }

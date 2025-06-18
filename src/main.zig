@@ -92,6 +92,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
             if (!try isValidServerOwner(conn, serverToken.?, data.server_id)) {
                 res.status = 403;
                 res.body = "Forbidden";
+                return;
             }
             conn.exec(
                 "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token = ?3 limit 1))",

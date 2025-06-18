@@ -53,8 +53,8 @@ fn initDB() !void {
     var conn = connPtr.*;
     try conn.exec("create table if not exists tokens (token text primary key, owner text)", .{});
     try conn.exec("create table if not exists players (uid text, name text, timestamp timestamp default current_timestamp, primary key (uid, name))", .{});
-    try conn.exec("create table if not exists servers (server_id text, server_name text, owner text, timestamp timestamp default current_timestamp)", .{});
-    try conn.exec("create table if not exists matches (match_id text unique, server_id text, game_mode text, map text, timestamp timestamp default current_timestamp)", .{});
+    try conn.exec("create table if not exists servers (server_id text primary key, server_name text, owner text, timestamp timestamp default current_timestamp)", .{});
+    try conn.exec("create table if not exists matches (match_id text primary key, server_id text, game_mode text, map text, timestamp timestamp default current_timestamp)", .{});
     try conn.exec("create table if not exists kill_data (timestamp timestamp default current_timestamp, match_id text, server_id text, game_time real, attacker_uid text, attacker_weapon text, attacker_titan text, attacker_x real, attacker_y real, attacker_z real, victim_uid text, victim_weapon text, victim_titan text, victim_x real, victim_y real, victim_z real, cause_of_death text, distance real)", .{});
 
     try conn.exec("create index if not exists kill_data_timestamp_idx on kill_data(timestamp)", .{});

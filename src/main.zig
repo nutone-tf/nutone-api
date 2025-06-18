@@ -243,6 +243,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
             try writeStream.endObject();
             res.status = 200;
+            res.content_type = httpz.ContentType.JSON;
             return;
         } else {
             res.status = 404;

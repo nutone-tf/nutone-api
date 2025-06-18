@@ -158,6 +158,13 @@ fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []const u
         if (success) {
             return true;
         } else {
+            if (try conn.row("select case when exists (select * from servers where server_id = ?1) then cast (0 as bit) else cast (1 as bit) end", .{server_id})) |existsRow| {
+                defer existsRow.deinit();
+                const exists = existsRow.boolean(0);
+                if (exists) {
+                    return true;
+                }
+            }
             return false;
         }
     }

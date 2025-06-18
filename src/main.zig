@@ -89,6 +89,10 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
         if (parsedData) |pD| {
             const data = pD.value;
+            if (!try isValidServerOwner(conn, serverToken.?, data.server_id)) {
+                res.status = 403;
+                res.body = "Forbidden";
+            }
             conn.exec(
                 "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token = ?3 limit 1))",
                 .{ data.server_id, data.server_name, serverToken },
@@ -141,6 +145,19 @@ fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
         if (try conn.row("select owner from tokens where token = ?1", .{token})) |row| {
             defer row.deinit();
             return true;
+        }
+    }
+    return false;
+}
+
+fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
+    if (try conn.row("select case when exists (select * from servers where server_id = ?1 and owner = (select owner from tokens where token = ?2)) then cast(1 as bit) else cast(0 as bit) end", .{ server_id, token })) |row| {
+        defer row.deinit();
+        const success = row.boolean(0);
+        if (success) {
+            return true;
+        } else {
+            return false;
         }
     }
     return false;

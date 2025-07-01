@@ -42,7 +42,10 @@ pub fn main() !void {
         server.deinit();
     }
     try initDB();
-    var router = try server.router(.{});
+    const cors = try server.middleware(httpz.middleware.Cors, .{
+        .origin = "https://nutone.okudai.dev/",
+    });
+    var router = try server.router(.{ .middlewares = &.{cors} });
     router.get("/v1/player/:id", getPlayerData, .{});
     router.post("/v1/data", insertServerData, .{});
 

@@ -226,9 +226,8 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.objectField("weapon_stats");
             try writeStream.beginArray();
             while (weaponRow.next()) |r| {
+                try writeStream.objectField(r.text(0));
                 try writeStream.beginObject();
-                try writeStream.objectField("weapon");
-                try writeStream.write(r.text(0));
                 try writeStream.objectField("kills");
                 try writeStream.write(r.int(1));
                 try writeStream.objectField("avg_distance");

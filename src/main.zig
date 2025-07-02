@@ -46,7 +46,7 @@ pub fn main() !void {
         .origin = "https://nutone.okudai.dev/",
     });
     var router = try server.router(.{ .middlewares = &.{cors} });
-    router.get("/v1/player/:id", getPlayerData, .{});
+    router.get("/v1/players/:id", getPlayerData, .{});
     router.post("/v1/data", insertServerData, .{});
 
     try server.listen();

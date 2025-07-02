@@ -46,7 +46,9 @@ pub fn main() !void {
         .origin = "https://nutone.okudai.dev/",
     });
     var router = try server.router(.{ .middlewares = &.{cors} });
+
     router.get("/v1/players/:id", getPlayerData, .{});
+    router.get("/v1/players", getAllPlayerData, .{});
     router.post("/v1/data", insertServerData, .{});
 
     try server.listen();
@@ -250,4 +252,30 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         res.body = "Not Implemented";
         return;
     }
+}
+
+fn getAllPlayerData(_: *httpz.Request, res: *httpz.Response) !void {
+    var conn = connPtr.*;
+    var writeStream = std.json.writeStream(res.writer(), .{});
+
+    defer writeStream.deinit();
+
+    const allPlayersRow = try conn.rows("select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid) as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid) as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1)", .{});
+    defer allPlayersRow.deinit();
+    try writeStream.beginObject();
+    while (allPlayersRow.next()) |r| {
+        try writeStream.objectField(r.text(0));
+        try writeStream.beginObject();
+        try writeStream.objectField("name");
+        try writeStream.write(r.text(1));
+        try writeStream.objectField("kills");
+        try writeStream.write(r.int(2));
+        try writeStream.objectField("deaths");
+        try writeStream.write(r.int(3));
+        try writeStream.endObject();
+    }
+    try writeStream.endObject();
+    res.status = 200;
+    res.content_type = httpz.ContentType.JSON;
+    return;
 }

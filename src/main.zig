@@ -198,7 +198,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
 
             if (weapon) |w| {
-                const weaponRow = try conn.row("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
+                const weaponRow = try conn.row("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
                 defer if (weaponRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;
@@ -238,7 +238,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                     try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
                 }
 
-                var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
+                var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid group by attacker_weapon", .{player});
                 defer weaponRow.deinit();
 
                 try writeStream.objectField("weapon_stats");

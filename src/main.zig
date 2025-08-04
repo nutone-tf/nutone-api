@@ -253,13 +253,19 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     }
 }
 
-fn getAllPlayerData(_: *httpz.Request, res: *httpz.Response) !void {
+fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var writeStream = std.json.writeStream(res.writer(), .{});
 
     defer writeStream.deinit();
 
-    var allPlayersRow = try conn.rows("select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid) as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid) as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1) order by kills desc", .{});
+    var queryParameters = try req.query();
+    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
+    if (page < 1) {
+        page = 1;
+    }
+
+    var allPlayersRow = try conn.rows("select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid) as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid) as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1) order by kills desc limit ?1 offset ?2", .{ 25, 25 * (page - 1) });
     defer allPlayersRow.deinit();
     try writeStream.beginObject();
     while (allPlayersRow.next()) |r| {

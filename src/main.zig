@@ -268,6 +268,8 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var allPlayersRow = try conn.rows("select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid) as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid) as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1) order by kills desc limit ?1 offset ?2", .{ 25, 25 * (page - 1) });
     defer allPlayersRow.deinit();
     try writeStream.beginObject();
+    try writeStream.objectField("players");
+    try writeStream.beginObject();
     while (allPlayersRow.next()) |r| {
         try writeStream.objectField(r.text(0));
         try writeStream.beginObject();
@@ -279,6 +281,12 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         try writeStream.write(r.int(3));
         try writeStream.endObject();
     }
+    try writeStream.endObject();
+    try writeStream.objectField("info");
+    try writeStream.beginObject();
+    try writeStream.objectField("currentPage");
+    try writeStream.write(page);
+    try writeStream.endObject();
     try writeStream.endObject();
     res.status = 200;
     res.content_type = httpz.ContentType.JSON;

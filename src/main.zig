@@ -198,13 +198,13 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
 
             if (weapon) |w| {
-                const weaponRow = try conn.row("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
+                const weaponRow = try conn.row("selectcount(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
                 defer if (weaponRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;
                 if (weaponRow) |r| {
-                    kills = r.int(1);
-                    distance = r.float(2);
+                    kills = r.int(0);
+                    distance = r.float(1);
                 }
                 try writeStream.objectField("kills");
                 try writeStream.write(kills);

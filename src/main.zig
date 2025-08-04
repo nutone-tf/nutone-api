@@ -164,6 +164,8 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var uid: ?[]const u8 = null;
     var writeStream = std.json.writeStream(res.writer(), .{});
+    var queryParameters = try req.query();
+    const weapon = queryParameters.get("weapon");
 
     defer writeStream.deinit();
     if (req.param("id")) |id| {
@@ -195,48 +197,63 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             }
             try writeStream.endArray();
 
-            const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid", .{player});
-            var kills: i64 = 0;
-            defer if (currentKillsRow) |r| r.deinit();
-
-            const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
-            var deaths: i64 = 0;
-            defer if (currentDeathsRow) |r| r.deinit();
-
-            if (currentKillsRow) |r| {
-                kills = r.int(0);
-            }
-            if (currentDeathsRow) |r| {
-                deaths = r.int(0);
-            }
-
-            try writeStream.objectField("kills");
-            try writeStream.write(kills);
-            try writeStream.objectField("deaths");
-            try writeStream.write(deaths);
-
-            try writeStream.objectField("kd");
-            if (deaths == 0) {
-                try writeStream.write(kills);
-            } else {
-                try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
-            }
-
-            var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
-            defer weaponRow.deinit();
-
-            try writeStream.objectField("weapon_stats");
-            try writeStream.beginObject();
-            while (weaponRow.next()) |r| {
-                try writeStream.objectField(r.text(0));
-                try writeStream.beginObject();
+            if (weapon) |w| {
+                const weaponRow = try conn.row("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
+                defer if (weaponRow) |r| r.deinit();
+                var kills: i64 = 0;
+                var distance: f64 = 0;
+                if (weaponRow) |r| {
+                    kills = r.int(1);
+                    distance = r.float(2);
+                }
                 try writeStream.objectField("kills");
-                try writeStream.write(r.int(1));
+                try writeStream.write(kills);
                 try writeStream.objectField("avg_distance");
-                try writeStream.print("{d}", .{r.float(2)});
+                try writeStream.print("{d}", .{distance});
+            } else {
+                const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid", .{player});
+                var kills: i64 = 0;
+                defer if (currentKillsRow) |r| r.deinit();
+
+                const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
+                var deaths: i64 = 0;
+                defer if (currentDeathsRow) |r| r.deinit();
+
+                if (currentKillsRow) |r| {
+                    kills = r.int(0);
+                }
+                if (currentDeathsRow) |r| {
+                    deaths = r.int(0);
+                }
+
+                try writeStream.objectField("kills");
+                try writeStream.write(kills);
+                try writeStream.objectField("deaths");
+                try writeStream.write(deaths);
+
+                try writeStream.objectField("kd");
+                if (deaths == 0) {
+                    try writeStream.write(kills);
+                } else {
+                    try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
+                }
+
+                var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 group by attacker_weapon", .{player});
+                defer weaponRow.deinit();
+
+                try writeStream.objectField("weapon_stats");
+                try writeStream.beginObject();
+                while (weaponRow.next()) |r| {
+                    try writeStream.objectField(r.text(0));
+                    try writeStream.beginObject();
+                    try writeStream.objectField("kills");
+                    try writeStream.write(r.int(1));
+                    try writeStream.objectField("avg_distance");
+                    try writeStream.print("{d}", .{r.float(2)});
+                    try writeStream.endObject();
+                }
                 try writeStream.endObject();
             }
-            try writeStream.endObject();
             try writeStream.endObject();
             res.status = 200;
             res.content_type = httpz.ContentType.JSON;

@@ -1,6 +1,7 @@
 const std = @import("std");
 const httpz = @import("httpz");
 const zqlite = @import("zqlite");
+const queries = @import("queries.zig");
 
 const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
@@ -56,16 +57,16 @@ pub fn main() !void {
 
 fn initDB() !void {
     var conn = connPtr.*;
-    try conn.exec("create table if not exists tokens (token text primary key, owner text)", .{});
-    try conn.exec("create table if not exists players (uid text, name text, timestamp timestamp default current_timestamp, primary key (uid, name))", .{});
-    try conn.exec("create table if not exists servers (server_id text primary key, server_name text, owner text, timestamp timestamp default current_timestamp)", .{});
-    try conn.exec("create table if not exists matches (match_id text primary key, server_id text, game_mode text, map text, timestamp timestamp default current_timestamp)", .{});
-    try conn.exec("create table if not exists kill_data (timestamp timestamp default current_timestamp, match_id text, server_id text, game_time real, attacker_uid text, attacker_weapon text, attacker_titan text, attacker_x real, attacker_y real, attacker_z real, victim_uid text, victim_weapon text, victim_titan text, victim_x real, victim_y real, victim_z real, cause_of_death text, distance real)", .{});
+    try conn.exec(queries.createTokensTable, .{});
+    try conn.exec(queries.createPlayersTable, .{});
+    try conn.exec(queries.createServersTable, .{});
+    try conn.exec(queries.createMatchesTable, .{});
+    try conn.exec(queries.createKillDataTable, .{});
 
-    try conn.exec("create index if not exists kill_data_timestamp_idx on kill_data(timestamp)", .{});
-    try conn.exec("create index if not exists kill_data_server_idx on kill_data(server_id)", .{});
-    try conn.exec("create index if not exists kill_data_attacker_idx on kill_data(attacker_uid)", .{});
-    try conn.exec("create index if not exists kill_data_victim_idx on kill_data(victim_uid)", .{});
+    try conn.exec(queries.createKillDataTimestampIDX, .{});
+    try conn.exec(queries.createKillDataServerIDX, .{});
+    try conn.exec(queries.createKillDataAttackerIDX, .{});
+    try conn.exec(queries.createKillDataVictimIDX, .{});
 }
 
 fn readKillData(allocator: std.mem.Allocator, data: []const u8) !std.json.Parsed(KillData) {
@@ -100,19 +101,19 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 return;
             }
             try conn.exec(
-                "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token = ?3 limit 1))",
+                queries.insertServerData,
                 .{ data.server_id, data.server_name, serverToken },
             );
             try conn.exec(
-                "insert or replace into players (uid, name) values (?1, ?2), (?3, ?4)",
+                queries.insertPlayerData,
                 .{ data.attacker_uid, data.attacker_name, data.victim_uid, data.victim_name },
             );
             try conn.exec(
-                "insert or ignore into matches (match_id, server_id, game_mode, map) values (?1, ?2, ?3, ?4)",
+                queries.insertMatchData,
                 .{ data.match_id, data.server_id, data.game_mode, data.map },
             );
             try conn.exec(
-                "insert into kill_data (match_id, server_id, game_time, attacker_uid, attacker_weapon, attacker_titan, attacker_x, attacker_y, attacker_z, victim_uid, victim_weapon, victim_x, victim_y, victim_z, cause_of_death, distance) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+                queries.insertKillData,
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
             );
         } else {
@@ -132,7 +133,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
 
 fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
-        if (try conn.row("select owner from tokens where token = ?1", .{token})) |row| {
+        if (try conn.row(queries.validateToken, .{token})) |row| {
             defer row.deinit();
             return true;
         }
@@ -141,13 +142,13 @@ fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
 }
 
 fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
-    if (try conn.row("select case when exists (select * from servers where server_id = ?1 and owner = (select owner from tokens where token = ?2)) then cast(1 as bit) else cast(0 as bit) end", .{ server_id, token })) |row| {
+    if (try conn.row(queries.validateServerOwnership, .{ server_id, token })) |row| {
         defer row.deinit();
         const success = row.boolean(0);
         if (success) {
             return true;
         } else {
-            if (try conn.row("select case when exists (select * from servers where server_id = ?1) then cast (0 as bit) else cast (1 as bit) end", .{server_id})) |existsRow| {
+            if (try conn.row(queries.validateServerExistence, .{server_id})) |existsRow| {
                 defer existsRow.deinit();
                 const exists = existsRow.boolean(0);
                 if (exists) {
@@ -172,7 +173,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         var row: ?zqlite.Row = null;
         defer if (row) |r| r.deinit();
 
-        if (try conn.row("select uid from players where uid = ?1 or name = ?1 order by timestamp desc limit 1", .{id})) |r| {
+        if (try conn.row(queries.getPlayerUID, .{id})) |r| {
             row = r;
         }
 
@@ -181,7 +182,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
 
         if (uid) |player| {
-            var currentNameRow = try conn.rows("select name from players where uid = ?1 order by timestamp desc", .{player});
+            var currentNameRow = try conn.rows(queries.getPlayerNameFromUID, .{player});
             defer currentNameRow.deinit();
             try writeStream.beginObject();
             if (currentNameRow.next()) |r| {
@@ -198,7 +199,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.endArray();
 
             if (weapon) |w| {
-                const weaponRow = try conn.row("select count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid and attacker_weapon = ?2 group by attacker_weapon", .{ player, w });
+                const weaponRow = try conn.row(queries.getPlayerSpecificWeaponData, .{ player, w });
                 defer if (weaponRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;
@@ -211,11 +212,11 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.objectField("avg_distance");
                 try writeStream.print("{d}", .{distance});
             } else {
-                const currentKillsRow = try conn.row("select count(1) from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid", .{player});
+                const currentKillsRow = try conn.row(queries.getPlayerKills, .{player});
                 var kills: i64 = 0;
                 defer if (currentKillsRow) |r| r.deinit();
 
-                const currentDeathsRow = try conn.row("select count(1) from kill_data where victim_uid = ?1", .{player});
+                const currentDeathsRow = try conn.row(queries.getPlayerDeaths, .{player});
                 var deaths: i64 = 0;
                 defer if (currentDeathsRow) |r| r.deinit();
 
@@ -238,7 +239,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                     try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
                 }
 
-                var weaponRow = try conn.rows("select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid group by attacker_weapon", .{player});
+                var weaponRow = try conn.rows(queries.getPlayerAllWeaponData, .{player});
                 defer weaponRow.deinit();
 
                 try writeStream.objectField("weapon_stats");
@@ -282,7 +283,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         page = 1;
     }
 
-    var allPlayersRow = try conn.rows("select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid) as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid) as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1) order by kills desc limit ?1 offset ?2", .{ 25, 25 * (page - 1) });
+    var allPlayersRow = try conn.rows(queries.getAllPlayerData, .{ 25, 25 * (page - 1) });
     defer allPlayersRow.deinit();
     try writeStream.beginObject();
     try writeStream.objectField("players");

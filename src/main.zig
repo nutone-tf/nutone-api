@@ -299,17 +299,32 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     try writeStream.beginObject();
     try writeStream.objectField("players");
     try writeStream.beginObject();
-    while (allPlayersRow.next()) |r| {
-        try writeStream.objectField(r.text(0));
-        try writeStream.beginObject();
-        try writeStream.objectField("name");
-        try writeStream.write(r.text(1));
-        try writeStream.objectField("kills");
-        try writeStream.write(r.int(2));
-        try writeStream.objectField("deaths");
-        try writeStream.write(r.int(3));
-        try writeStream.endObject();
+    if (weapon) |_| {
+        while (allPlayersRow.next()) |r| {
+            try writeStream.objectField(r.text(0));
+            try writeStream.beginObject();
+            try writeStream.objectField("name");
+            try writeStream.write(r.text(1));
+            try writeStream.objectField("kills");
+            try writeStream.write(r.int(2));
+            try writeStream.objectField("avg_distance");
+            try writeStream.print("{d}", r.float(3));
+            try writeStream.endObject();
+        }
+    } else {
+        while (allPlayersRow.next()) |r| {
+            try writeStream.objectField(r.text(0));
+            try writeStream.beginObject();
+            try writeStream.objectField("name");
+            try writeStream.write(r.text(1));
+            try writeStream.objectField("kills");
+            try writeStream.write(r.int(2));
+            try writeStream.objectField("deaths");
+            try writeStream.write(r.int(3));
+            try writeStream.endObject();
+        }
     }
+
     try writeStream.endObject();
     try writeStream.objectField("info");
     try writeStream.beginObject();

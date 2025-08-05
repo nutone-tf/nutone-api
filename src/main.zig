@@ -221,7 +221,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     defer writeStream.deinit();
 
     var queryParameters = try req.query();
-    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
+    var page = std.fmt.parseInt(i64, queryParameters.get("page") orelse "1", 10) catch 1;
     const weapon = queryParameters.get("weapon");
     const server = queryParameters.get("server");
     var allPlayersRow: zqlite.Rows = undefined;

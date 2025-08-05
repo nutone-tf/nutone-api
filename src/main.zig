@@ -256,7 +256,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     };
 
     defer allPlayersRow.deinit();
-    defer resultsRow.deinit();
+    defer if (resultsRow) |r| r.deinit();
 
     try writeStream.beginObject();
     try writeStream.objectField("players");

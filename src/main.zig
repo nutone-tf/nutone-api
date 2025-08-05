@@ -8,31 +8,6 @@ const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
-pub const KillData = struct {
-    match_id: []const u8,
-    server_id: []const u8,
-    server_name: []const u8,
-    game_mode: []const u8,
-    game_time: f64,
-    map: []const u8,
-    attacker_name: []const u8,
-    attacker_uid: []const u8,
-    attacker_weapon: []const u8,
-    attacker_titan: []const u8,
-    attacker_x: f64,
-    attacker_y: f64,
-    attacker_z: f64,
-    victim_name: []const u8,
-    victim_uid: []const u8,
-    victim_weapon: []const u8,
-    victim_titan: []const u8,
-    victim_x: f64,
-    victim_y: f64,
-    victim_z: f64,
-    cause_of_death: []const u8,
-    distance: f64,
-};
-
 pub fn main() !void {
     var conn = try zqlite.open("./nutone.db", dbFlags);
     connPtr = &conn;

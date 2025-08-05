@@ -252,7 +252,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
 
     pages = switch (results) {
         0 => 0,
-        else => std.math.divCeil(u32, results, 25),
+        else => std.math.divCeil(i64, results, 25),
     };
 
     defer allPlayersRow.deinit();

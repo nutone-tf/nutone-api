@@ -221,7 +221,10 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     defer writeStream.deinit();
 
     var queryParameters = try req.query();
-    var page = std.fmt.parseInt(i64, queryParameters.get("page") orelse "1", 10) catch 1;
+    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
+    if (page < 1) {
+        page = 1;
+    }
     const weapon = queryParameters.get("weapon");
     const server = queryParameters.get("server");
     var allPlayersRow: zqlite.Rows = undefined;
@@ -251,8 +254,6 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         0 => 0,
         else => std.math.divCeil(i64, results, 25) catch 0,
     };
-
-    page = std.math.clamp(page, 1, pages);
 
     defer allPlayersRow.deinit();
     defer if (resultsRow) |r| r.deinit();

@@ -229,7 +229,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     const server = queryParameters.get("server");
     var allPlayersRow: zqlite.Rows = undefined;
     var resultsRow: ?zqlite.Row = undefined;
-    var results: u32 = 0;
+    var results: i64 = 0;
     var pages: u32 = 0;
 
     if (weapon != null and server != null) {

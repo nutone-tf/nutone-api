@@ -282,8 +282,19 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     if (page < 1) {
         page = 1;
     }
+    const weapon = queryParameters.get("weapon");
+    const server = queryParameters.get("server");
+    var allPlayersRow: zqlite.Rows = undefined;
 
-    var allPlayersRow = try conn.rows(queries.getAllPlayerData, .{ 25, 25 * (page - 1) });
+    if (weapon != null and server != null) {
+        allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeaponAndServer, .{ weapon, server, 25, 25 * (page - 1) });
+    } else if (weapon != null) {
+        allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeapon, .{ weapon, 25, 25 * (page - 1) });
+    } else if (server != null) {
+        allPlayersRow = try conn.rows(queries.getAllPlayerDataForServer, .{ server, 25, 25 * (page - 1) });
+    } else {
+        allPlayersRow = try conn.rows(queries.getAllPlayerData, .{ 25, 25 * (page - 1) });
+    }
     defer allPlayersRow.deinit();
     try writeStream.beginObject();
     try writeStream.objectField("players");

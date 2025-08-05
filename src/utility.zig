@@ -1,6 +1,8 @@
+const std = @import("std");
 const zqlite = @import("zqlite");
 const httpz = @import("httpz");
 const queries = @import("queries.zig");
+const types = @import("types.zig");
 
 pub fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
@@ -30,4 +32,8 @@ pub fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []con
         }
     }
     return false;
+}
+
+pub fn readKillData(allocator: std.mem.Allocator, data: []const u8) !std.json.Parsed(types.KillData) {
+    return std.json.parseFromSlice(types.KillData, allocator, data, .{ .allocate = .alloc_always });
 }

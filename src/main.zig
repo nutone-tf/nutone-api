@@ -45,10 +45,6 @@ fn initDB() !void {
     try conn.exec(queries.createKillDataVictimIDX, .{});
 }
 
-fn readKillData(allocator: std.mem.Allocator, data: []const u8) !std.json.Parsed(KillData) {
-    return std.json.parseFromSlice(KillData, allocator, data, .{ .allocate = .alloc_always });
-}
-
 fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var serverToken: ?[]const u8 = null;

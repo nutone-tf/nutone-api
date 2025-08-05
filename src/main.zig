@@ -3,6 +3,7 @@ const httpz = @import("httpz");
 const zqlite = @import("zqlite");
 const queries = @import("queries.zig");
 const utility = @import("utility.zig");
+const types = @import("types.zig");
 
 const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
@@ -49,13 +50,13 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var serverToken: ?[]const u8 = null;
     const allocator = gpa.allocator();
-    var parsedData: ?std.json.Parsed(KillData) = null;
+    var parsedData: ?std.json.Parsed(types.KillData) = null;
     defer if (parsedData) |pD| pD.deinit();
 
     if (try utility.isValidServer(conn, req)) {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
-            parsedData = readKillData(allocator, kill) catch {
+            parsedData = utility.readKillData(allocator, kill) catch {
                 res.status = 400;
                 res.body = "Bad Request";
                 return;

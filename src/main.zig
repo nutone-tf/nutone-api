@@ -308,7 +308,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.objectField("kills");
             try writeStream.write(r.int(2));
             try writeStream.objectField("avg_distance");
-            try writeStream.print("{d}", r.float(3));
+            try writeStream.print("{d}", .{r.float(3)});
             try writeStream.endObject();
         }
     } else {

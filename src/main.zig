@@ -230,7 +230,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var allPlayersRow: zqlite.Rows = undefined;
     var resultsRow: ?zqlite.Row = undefined;
     var results: i64 = 0;
-    var pages: u32 = 0;
+    var pages: i64 = 0;
 
     if (weapon != null and server != null) {
         allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeaponAndServer, .{ weapon, server, 25, 25 * (page - 1) });

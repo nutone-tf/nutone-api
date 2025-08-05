@@ -2,6 +2,7 @@ const std = @import("std");
 const httpz = @import("httpz");
 const zqlite = @import("zqlite");
 const queries = @import("queries.zig");
+const utility = @import("utility.zig");
 
 const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
@@ -80,7 +81,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var parsedData: ?std.json.Parsed(KillData) = null;
     defer if (parsedData) |pD| pD.deinit();
 
-    if (try isValidServer(conn, req)) {
+    if (try utility.isValidServer(conn, req)) {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = readKillData(allocator, kill) catch {
@@ -95,7 +96,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
         if (parsedData) |pD| {
             const data = pD.value;
-            if (!try isValidServerOwner(conn, serverToken.?, data.server_id)) {
+            if (!try utility.isValidServerOwner(conn, serverToken.?, data.server_id)) {
                 res.status = 403;
                 res.body = "Forbidden";
                 return;
@@ -129,36 +130,6 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         res.body = "Unauthorized";
         return;
     }
-}
-
-fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
-    if (req.header("token")) |token| {
-        if (try conn.row(queries.validateToken, .{token})) |row| {
-            defer row.deinit();
-            return true;
-        }
-    }
-    return false;
-}
-
-fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
-    if (try conn.row(queries.validateServerOwnership, .{ server_id, token })) |row| {
-        defer row.deinit();
-        const success = row.boolean(0);
-        if (success) {
-            return true;
-        } else {
-            if (try conn.row(queries.validateServerExistence, .{server_id})) |existsRow| {
-                defer existsRow.deinit();
-                const exists = existsRow.boolean(0);
-                if (exists) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-    return false;
 }
 
 fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {

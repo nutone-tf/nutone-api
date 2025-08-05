@@ -228,17 +228,36 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     const weapon = queryParameters.get("weapon");
     const server = queryParameters.get("server");
     var allPlayersRow: zqlite.Rows = undefined;
+    var resultsRow: ?zqlite.Row = undefined;
+    var results: u32 = 0;
+    var pages: u32 = 0;
 
     if (weapon != null and server != null) {
         allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeaponAndServer, .{ weapon, server, 25, 25 * (page - 1) });
+        resultsRow = try conn.row(queries.getAllPlayerDataForWeaponAndServerResultCount, .{ weapon, server });
     } else if (weapon != null) {
         allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeapon, .{ weapon, 25, 25 * (page - 1) });
+        resultsRow = try conn.row(queries.getAllPlayerDataForWeaponResultCount, .{weapon});
     } else if (server != null) {
         allPlayersRow = try conn.rows(queries.getAllPlayerDataForServer, .{ server, 25, 25 * (page - 1) });
+        resultsRow = try conn.row(queries.getAllPlayerDataForServerResultCount, .{server});
     } else {
         allPlayersRow = try conn.rows(queries.getAllPlayerData, .{ 25, 25 * (page - 1) });
+        resultsRow = try conn.row(queries.getAllPlayerDataResultCount, .{});
     }
+
+    if (resultsRow) |r| {
+        results = r.int(0);
+    }
+
+    pages = switch (results) {
+        0 => 0,
+        else => std.math.divCeil(u32, results, 25),
+    };
+
     defer allPlayersRow.deinit();
+    defer resultsRow.deinit();
+
     try writeStream.beginObject();
     try writeStream.objectField("players");
     try writeStream.beginObject();
@@ -273,6 +292,10 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     try writeStream.beginObject();
     try writeStream.objectField("currentPage");
     try writeStream.write(page);
+    try writeStream.objectField("allResults");
+    try writeStream.write(results);
+    try writeStream.objectField("maxPages");
+    try writeStream.write(pages);
     try writeStream.endObject();
     try writeStream.endObject();
     res.status = 200;

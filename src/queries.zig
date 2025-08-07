@@ -35,3 +35,6 @@ pub const getAllPlayerDataResultCount = "select count(1) from (select attacker_u
 pub const getAllPlayerDataForWeaponResultCount = "select count(1) from (select distinct attacker_uid from kill_data where attacker_weapon = ?1)";
 pub const getAllPlayerDataForServerResultCount = "select count(1) from (select attacker_uid from kill_data where server_id = ?1 union select victim_uid from kill_data where server_id = ?1)";
 pub const getAllPlayerDataForWeaponAndServerResultCount = "select count(1) from (select distinct attacker_uid from kill_data where attacker_weapon = ?1 and server_id = ?2)";
+
+pub const getServerCount = "select count(1) from servers";
+pub const getServerList = "select server_id, server_name, owner from servers";

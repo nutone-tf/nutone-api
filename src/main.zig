@@ -27,6 +27,7 @@ pub fn main() !void {
 
     router.get("/v1/players/:id", getPlayerData, .{});
     router.get("/v1/players", getAllPlayerData, .{});
+    router.get("/v1/servers", getServerList, .{});
     router.post("/v1/data", insertServerData, .{});
 
     try server.listen();
@@ -287,6 +288,64 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
     }
 
+    try writeStream.endObject();
+    try writeStream.objectField("info");
+    try writeStream.beginObject();
+    try writeStream.objectField("currentPage");
+    try writeStream.write(page);
+    try writeStream.objectField("allResults");
+    try writeStream.write(results);
+    try writeStream.objectField("maxPages");
+    try writeStream.write(pages);
+    try writeStream.endObject();
+    try writeStream.endObject();
+    res.status = 200;
+    res.content_type = httpz.ContentType.JSON;
+    return;
+}
+
+fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
+    var conn = connPtr.*;
+    var writeStream = std.json.writeStream(res.writer(), .{});
+
+    defer writeStream.deinit();
+
+    var queryParameters = try req.query();
+    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
+    if (page < 1) {
+        page = 1;
+    }
+    var resultsRow: ?zqlite.Row = undefined;
+    var results: i64 = 0;
+    var pages: i64 = 0;
+
+    resultsRow = try conn.row(queries.getServerCount, .{});
+    defer if (resultsRow) |r| r.deinit();
+
+    if (resultsRow) |r| {
+        results = r.int(0);
+    }
+
+    pages = switch (results) {
+        0 => 0,
+        else => std.math.divCeil(i64, results, 25) catch 0,
+    };
+
+    var serversRow = try conn.rows(queries.getServerList, .{});
+    defer serversRow.deinit();
+
+    try writeStream.beginObject();
+    try writeStream.objectField("servers");
+    try writeStream.beginObject();
+    while (serversRow.next()) |r| {
+        try writeStream.objectField(r.text(0));
+        try writeStream.beginObject();
+        try writeStream.objectField("server_name");
+        try writeStream.write(r.text(1));
+        try writeStream.objectField("owner");
+        try writeStream.write(r.text(2));
+        try writeStream.endObject();
+    }
     try writeStream.endObject();
     try writeStream.objectField("info");
     try writeStream.beginObject();

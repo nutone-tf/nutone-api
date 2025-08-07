@@ -143,7 +143,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             }
             try writeStream.endArray();
             if (weapon != null and server != null) {
-                const weaponRow = try conn.row(queries.getPlayerSpecificWeaponForServerData, .{ player, weapon });
+                const weaponRow = try conn.row(queries.getPlayerSpecificWeaponForServerData, .{ player, weapon, server });
                 defer if (weaponRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;
@@ -169,11 +169,11 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.objectField("avg_distance");
                 try writeStream.print("{d}", .{distance});
             } else if (server != null) {
-                const currentKillsRow = try conn.row(queries.getPlayerKillsForServer, .{player});
+                const currentKillsRow = try conn.row(queries.getPlayerKillsForServer, .{ player, server });
                 var kills: i64 = 0;
                 defer if (currentKillsRow) |r| r.deinit();
 
-                const currentDeathsRow = try conn.row(queries.getPlayerDeathsForServer, .{player});
+                const currentDeathsRow = try conn.row(queries.getPlayerDeathsForServer, .{ player, server });
                 var deaths: i64 = 0;
                 defer if (currentDeathsRow) |r| r.deinit();
 
@@ -196,7 +196,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                     try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
                 }
 
-                var weaponRow = try conn.rows(queries.getPlayerAllWeaponForServerData, .{player});
+                var weaponRow = try conn.rows(queries.getPlayerAllWeaponForServerData, .{ player, server });
                 defer weaponRow.deinit();
 
                 try writeStream.objectField("weapon_stats");

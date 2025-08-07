@@ -4,7 +4,7 @@ const httpz = @import("httpz");
 const queries = @import("queries.zig");
 const types = @import("types.zig");
 
-pub fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
+pub fn isValidToken(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
         if (try conn.row(queries.validateToken, .{token})) |row| {
             defer row.deinit();
@@ -14,7 +14,7 @@ pub fn isValidServer(conn: zqlite.Conn, req: *httpz.Request) !bool {
     return false;
 }
 
-pub fn isValidServerOwner(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
+pub fn isValidServer(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
     if (try conn.row(queries.validateServerOwnership, .{ server_id, token })) |row| {
         defer row.deinit();
         const success = row.boolean(0);

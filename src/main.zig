@@ -54,7 +54,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var parsedData: ?std.json.Parsed(types.KillData) = null;
     defer if (parsedData) |pD| pD.deinit();
 
-    if (try utility.isValidServer(conn, req)) {
+    if (try utility.isValidToken(conn, req)) {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = utility.readKillData(allocator, kill) catch {
@@ -69,7 +69,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
         if (parsedData) |pD| {
             const data = pD.value;
-            if (!try utility.isValidServerOwner(conn, serverToken.?, data.server_id)) {
+            if (!try utility.isValidServer(conn, serverToken.?, data.server_id)) {
                 res.status = 403;
                 res.body = "Forbidden";
                 return;

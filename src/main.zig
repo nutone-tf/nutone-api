@@ -269,11 +269,11 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     };
     page = std.math.clamp(page, 0, pages);
 
+    try writeStream.beginObject();
     if (results != 0) {
         var resultsRows = try conn.rows(resultsQuery, .{ server, weapon, 25 * (page - 1), 25 });
         defer resultsRows.deinit();
 
-        try writeStream.beginObject();
         try writeStream.objectField("players");
         try writeStream.beginObject();
         if (weapon != null) {

@@ -264,10 +264,6 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             res.body = "Not Found";
             return;
         }
-    } else {
-        res.status = 501;
-        res.body = "Not Implemented";
-        return;
     }
 }
 

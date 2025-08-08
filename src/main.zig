@@ -301,19 +301,18 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.endObject();
             }
         }
-
-        try writeStream.endObject();
-        try writeStream.objectField("info");
-        try writeStream.beginObject();
-        try writeStream.objectField("currentPage");
-        try writeStream.write(page);
-        try writeStream.objectField("allResults");
-        try writeStream.write(results);
-        try writeStream.objectField("maxPages");
-        try writeStream.write(pages);
-        try writeStream.endObject();
         try writeStream.endObject();
     }
+    try writeStream.objectField("info");
+    try writeStream.beginObject();
+    try writeStream.objectField("currentPage");
+    try writeStream.write(page);
+    try writeStream.objectField("allResults");
+    try writeStream.write(results);
+    try writeStream.objectField("maxPages");
+    try writeStream.write(pages);
+    try writeStream.endObject();
+    try writeStream.endObject();
 
     res.status = 200;
     res.content_type = httpz.ContentType.JSON;

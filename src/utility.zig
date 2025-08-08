@@ -6,8 +6,6 @@ const types = @import("types.zig");
 
 pub fn isValidToken(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
-        if (token.len > 30) return false;
-        for (token) |c| if (!isWordChar(c)) return false;
         if (try conn.row(queries.validateToken, .{token})) |row| {
             defer row.deinit();
             return true;
@@ -16,14 +14,16 @@ pub fn isValidToken(conn: zqlite.Conn, req: *httpz.Request) !bool {
     return false;
 }
 
-pub fn isWordChar(c: u8) bool {
+pub fn isServerIDChar(c: u8) bool {
     return switch (c) {
-        '0'...'9', 'A'...'Z', 'a'...'z', '-', '_' => true,
+        '0'...'9', 'a'...'z', '-', '_' => true,
         else => false,
     };
 }
 
 pub fn isValidServer(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
+    if (server_id.len > 30) return false;
+    for (server_id) |c| if (!isServerIDChar(c)) return false;
     if (try conn.row(queries.validateServerOwnership, .{ server_id, token })) |row| {
         defer row.deinit();
         const success = row.boolean(0);

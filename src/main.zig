@@ -150,7 +150,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                     .{ .weapon = weapon, .server = server },
                 );
                 defer allocator.free(query);
-                const resultsRow = try conn.row(query, .{ player, weapon, server });
+                const resultsRow = try conn.row(query, .{ server, weapon, player });
                 defer if (resultsRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;

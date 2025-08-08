@@ -251,7 +251,14 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     );
     defer allocator.free(resultsQuery);
 
-    const infoRow = try conn.row(infoQuery, if (weapon != null) .{ server, weapon } else if (server != null) .{ weapon, server } else .{});
+    const infoRow: ?zqlite.Row = undefined;
+    if (weapon != null) {
+        infoRow = try conn.row(infoQuery, .{ server, weapon });
+    } else if (server != null) {
+        infoRow = try conn.row(infoQuery, .{ weapon, server });
+    } else {
+        infoRow = try conn.row(infoQuery, .{});
+    }
     if (infoRow) |r| {
         defer r.deinit();
         results = r.int(0);

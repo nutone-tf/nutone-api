@@ -6,12 +6,21 @@ const types = @import("types.zig");
 
 pub fn isValidToken(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
+        if (token.len > 30) return false;
+        for (token) |c| if (!isWordChar(c)) return false;
         if (try conn.row(queries.validateToken, .{token})) |row| {
             defer row.deinit();
             return true;
         }
     }
     return false;
+}
+
+pub fn isWordChar(c: u8) bool {
+    return switch (c) {
+        '0'...'9', 'A'...'Z', 'a'...'z', '-', '_' => true,
+        else => false,
+    };
 }
 
 pub fn isValidServer(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {

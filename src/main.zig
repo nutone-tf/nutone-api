@@ -165,12 +165,12 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             } else {
                 const killsQuery = try queries.Get.Player.Kills(
                     allocator,
-                    .{ .weapon = weapon, .server = server },
+                    .{ .server = server },
                 );
                 defer allocator.free(killsQuery);
                 const deathsQuery = try queries.Get.Player.Deaths(
                     allocator,
-                    .{ .weapon = weapon, .server = server },
+                    .{ .server = server },
                 );
                 defer allocator.free(deathsQuery);
                 const weaponsQuery = try queries.Get.Player.WeaponData(
@@ -179,9 +179,9 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 );
                 defer allocator.free(weaponsQuery);
 
-                const killsRow = try conn.row(killsQuery, .{ player, weapon, server });
+                const killsRow = try conn.row(killsQuery, .{ player, server });
                 defer if (killsRow) |r| r.deinit();
-                const deathsRow = try conn.row(deathsQuery, .{ player, weapon, server });
+                const deathsRow = try conn.row(deathsQuery, .{ player, server });
                 defer if (deathsRow) |r| r.deinit();
 
                 var kills: i64 = 0;

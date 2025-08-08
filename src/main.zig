@@ -267,7 +267,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         0 => 0,
         else => std.math.divCeil(i64, results, 25) catch 0,
     };
-    page = std.math.clamp(page, 0, pages);
+    page = std.math.clamp(page, 1, pages);
 
     try writeStream.beginObject();
     if (results != 0) {

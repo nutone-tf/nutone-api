@@ -103,9 +103,9 @@ pub const Get = struct {
             } else {
                 const query = try std.mem.joinZ(allocator, " ", &.{
                     "select count(1) from (select attacker_uid from kill_data",
-                    if (filters.server != null) "where server_id = ?1" else "",
+                    if (filters.server != null) "where server_id = ?2" else "",
                     "union select victim_uid from kill_data",
-                    if (filters.server != null) "where server_id = ?1" else "",
+                    if (filters.server != null) "where server_id = ?2" else "",
                     ")",
                 });
                 return query;

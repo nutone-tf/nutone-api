@@ -179,9 +179,9 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 );
                 defer allocator.free(weaponsQuery);
 
-                const killsRow = try conn.row(killsQuery, .{ player, server });
+                const killsRow = try conn.row(killsQuery, .{ server, player });
                 defer if (killsRow) |r| r.deinit();
-                const deathsRow = try conn.row(deathsQuery, .{ player, server });
+                const deathsRow = try conn.row(deathsQuery, .{ server, player });
                 defer if (deathsRow) |r| r.deinit();
 
                 var kills: i64 = 0;
@@ -195,7 +195,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                     deaths = r.int(0);
                 }
 
-                var weaponRows = try conn.rows(weaponsQuery, .{ player, weapon, server });
+                var weaponRows = try conn.rows(weaponsQuery, .{ server, weapon, player });
                 defer weaponRows.deinit();
 
                 try writeStream.objectField("kills");
@@ -263,7 +263,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     page = std.math.clamp(page, 0, pages);
 
     if (results != 0) {
-        var resultsRows = try conn.rows(resultsQuery, .{ 25, 25 * (page - 1), weapon, server });
+        var resultsRows = try conn.rows(resultsQuery, .{ server, weapon, 25 * (page - 1), 25 });
         defer resultsRows.deinit();
 
         try writeStream.beginObject();

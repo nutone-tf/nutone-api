@@ -36,30 +36,30 @@ pub const Get = struct {
         pub const Aliases = "select name from players where uid = ?1 order by timestamp desc";
         pub fn Kills(allocator: std.mem.Allocator, filters: Filters) ![:0]u8 {
             const query = try std.mem.joinZ(allocator, " ", &.{
-                "select count(1) from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid",
-                if (filters.server != null) "and server_id = ?2" else "",
+                "select count(1) from kill_data where attacker_uid = ?2 and attacker_uid <> victim_uid",
+                if (filters.server != null) "and server_id = ?1" else "",
             });
             return query;
         }
         pub fn Deaths(allocator: std.mem.Allocator, filters: Filters) ![:0]u8 {
             const query = try std.mem.joinZ(allocator, " ", &.{
-                "select count(1) from kill_data where victim_uid = ?1",
-                if (filters.server != null) "and server_id = ?2" else "",
+                "select count(1) from kill_data where victim_uid = ?2",
+                if (filters.server != null) "and server_id = ?1" else "",
             });
             return query;
         }
         pub fn WeaponData(allocator: std.mem.Allocator, filters: Filters) ![:0]u8 {
             if (filters.weapon != null) {
                 const query = std.mem.joinZ(allocator, " ", &.{
-                    "select count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid and attacker_weapon = ?2",
-                    if (filters.server != null) "and server_id = ?3" else "",
+                    "select count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?3 and attacker_uid <> victim_uid and attacker_weapon = ?2",
+                    if (filters.server != null) "and server_id = ?1" else "",
                     "group by attacker_weapon",
                 });
                 return query;
             } else {
                 const query = std.mem.joinZ(allocator, " ", &.{
-                    "select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?1 and attacker_uid <> victim_uid",
-                    if (filters.server != null) "and server_id = ?3" else "",
+                    "select attacker_weapon, count(1) as kills, avg(distance) as avg_distance from kill_data where attacker_uid = ?3 and attacker_uid <> victim_uid",
+                    if (filters.server != null) "and server_id = ?1" else "",
                     "group by attacker_weapon",
                 });
                 return query;
@@ -70,24 +70,24 @@ pub const Get = struct {
         pub fn Data(allocator: std.mem.Allocator, filters: Filters) ![:0]u8 {
             if (filters.weapon != null) {
                 const query = try std.mem.joinZ(allocator, " ", &.{
-                    "select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid and kill_data.attacker_weapon = ?3",
-                    if (filters.server != null) "and kill_data.server_id = ?4" else "",
-                    ") as kills, (select avg(kill_data.distance) from kill_data where players.uid = kill_data.attacker_uid and kill_data.attacker_uid <> kill_data.victim_uid and kill_data.attacker_weapon = ?3",
-                    if (filters.server != null) "and kill_data.server_id = ?4" else "",
+                    "select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid and kill_data.attacker_weapon = ?2",
+                    if (filters.server != null) "and kill_data.server_id = ?1" else "",
+                    ") as kills, (select avg(kill_data.distance) from kill_data where players.uid = kill_data.attacker_uid and kill_data.attacker_uid <> kill_data.victim_uid and kill_data.attacker_weapon = ?2",
+                    if (filters.server != null) "and kill_data.server_id = ?1" else "",
                     ") as avg_distance from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1)",
-                    if (filters.server != null) "and id in (select attacker_uid from kill_data where kill_data.server_id = ?4)" else "",
-                    "and kills <> 0 order by kills desc limit ?1 offset ?2",
+                    if (filters.server != null) "and id in (select attacker_uid from kill_data where kill_data.server_id = ?1)" else "",
+                    "and kills <> 0 order by kills desc limit ?4 offset ?3",
                 });
                 return query;
             } else {
                 const query = try std.mem.joinZ(allocator, " ", &.{
                     "select players.uid as id, players.name as name, (select count(1) from kill_data where players.uid = kill_data.attacker_uid and kill_data.victim_uid <> kill_data.attacker_uid",
-                    if (filters.server != null) "and kill_data.server_id = ?4" else "",
+                    if (filters.server != null) "and kill_data.server_id = ?1" else "",
                     ") as kills, (select count(1) from kill_data where players.uid = kill_data.victim_uid",
-                    if (filters.server != null) "and kill_data.server_id = ?4" else "",
+                    if (filters.server != null) "and kill_data.server_id = ?1" else "",
                     ") as deaths from players where name = (select players.name from players where players.uid = id order by timestamp desc limit 1)",
-                    if (filters.server != null) "and id in (select attacker_uid from kill_data where kill_data.server_id = ?4 union select victim_uid from kill_data where kill_data.server_id = ?4)" else "",
-                    "order by kills desc limit ?1 offset ?2",
+                    if (filters.server != null) "and id in (select attacker_uid from kill_data where kill_data.server_id = ?1 union select victim_uid from kill_data where kill_data.server_id = ?1)" else "",
+                    "order by kills desc limit ?4 offset ?3",
                 });
                 return query;
             }
@@ -95,17 +95,17 @@ pub const Get = struct {
         pub fn Count(allocator: std.mem.Allocator, filters: Filters) ![:0]u8 {
             if (filters.weapon != null) {
                 const query = try std.mem.joinZ(allocator, " ", &.{
-                    "select count(1) from (select distinct attacker_uid from kill_data where attacker_weapon = ?1",
-                    if (filters.server != null) "and server_id = ?2" else "",
+                    "select count(1) from (select distinct attacker_uid from kill_data where attacker_weapon = ?2",
+                    if (filters.server != null) "and server_id = ?1" else "",
                     ")",
                 });
                 return query;
             } else {
                 const query = try std.mem.joinZ(allocator, " ", &.{
                     "select count(1) from (select attacker_uid from kill_data",
-                    if (filters.server != null) "where server_id = ?2" else "",
+                    if (filters.server != null) "where server_id = ?1" else "",
                     "union select victim_uid from kill_data",
-                    if (filters.server != null) "where server_id = ?2" else "",
+                    if (filters.server != null) "where server_id = ?1" else "",
                     ")",
                 });
                 return query;

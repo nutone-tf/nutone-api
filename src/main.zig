@@ -251,7 +251,7 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     );
     defer allocator.free(resultsQuery);
 
-    const infoRow = try conn.row(infoQuery, .{ weapon, server });
+    const infoRow = try conn.row(infoQuery, .{ server, weapon });
     if (infoRow) |r| {
         defer r.deinit();
         results = r.int(0);

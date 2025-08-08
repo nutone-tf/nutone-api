@@ -22,3 +22,9 @@ pub const KillData = struct {
     cause_of_death: []const u8,
     distance: f64,
 };
+
+pub const Filters = struct {
+    page: ?[]const u8 = null,
+    weapon: ?[]const u8 = null,
+    server: ?[]const u8 = null,
+};

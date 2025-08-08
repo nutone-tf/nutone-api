@@ -4,6 +4,7 @@ const zqlite = @import("zqlite");
 const queries = @import("queries.zig");
 const utility = @import("utility.zig");
 const KillData = @import("types.zig").KillData;
+const Filters = @import("types.zig").Filters;
 
 const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
@@ -35,16 +36,16 @@ pub fn main() !void {
 
 fn initDB() !void {
     var conn = connPtr.*;
-    try conn.exec(queries.createTokensTable, .{});
-    try conn.exec(queries.createPlayersTable, .{});
-    try conn.exec(queries.createServersTable, .{});
-    try conn.exec(queries.createMatchesTable, .{});
-    try conn.exec(queries.createKillDataTable, .{});
+    try conn.exec(queries.Create.Table.Tokens, .{});
+    try conn.exec(queries.Create.Table.Players, .{});
+    try conn.exec(queries.Create.Table.Matches, .{});
+    try conn.exec(queries.Create.Table.Servers, .{});
+    try conn.exec(queries.Create.Table.KillData, .{});
 
-    try conn.exec(queries.createKillDataTimestampIDX, .{});
-    try conn.exec(queries.createKillDataServerIDX, .{});
-    try conn.exec(queries.createKillDataAttackerIDX, .{});
-    try conn.exec(queries.createKillDataVictimIDX, .{});
+    try conn.exec(queries.Create.Index.KillDataTimestamp, .{});
+    try conn.exec(queries.Create.Index.KillDataServer, .{});
+    try conn.exec(queries.Create.Index.KillDataAttacker, .{});
+    try conn.exec(queries.Create.Index.KillDataVictim, .{});
 }
 
 fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
@@ -75,19 +76,19 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 return;
             }
             try conn.exec(
-                queries.insertServerData,
+                queries.Insert.Server,
                 .{ data.server_id, data.server_name, serverToken },
             );
             try conn.exec(
-                queries.insertPlayerData,
+                queries.Insert.Player,
                 .{ data.attacker_uid, data.attacker_name, data.victim_uid, data.victim_name },
             );
             try conn.exec(
-                queries.insertMatchData,
+                queries.Insert.Match,
                 .{ data.match_id, data.server_id, data.game_mode, data.map },
             );
             try conn.exec(
-                queries.insertKillData,
+                queries.Insert.Kill,
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
             );
         } else {
@@ -109,6 +110,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var uid: ?[]const u8 = null;
     var writeStream = std.json.writeStream(res.writer(), .{});
+    var allocator = gpa.allocator();
     var queryParameters = try req.query();
     const weapon = queryParameters.get("weapon");
     const server = queryParameters.get("server");
@@ -118,7 +120,7 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         var row: ?zqlite.Row = null;
         defer if (row) |r| r.deinit();
 
-        if (try conn.row(queries.getPlayerUID, .{id})) |r| {
+        if (try conn.row(queries.Get.Player.UID, .{id})) |r| {
             row = r;
         }
 
@@ -127,10 +129,10 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
 
         if (uid) |player| {
-            var currentNameRow = try conn.rows(queries.getPlayerNameFromUID, .{player});
-            defer currentNameRow.deinit();
+            var aliasRow = try conn.rows(queries.Get.Player.Aliases, .{player});
+            defer aliasRow.deinit();
             try writeStream.beginObject();
-            if (currentNameRow.next()) |r| {
+            if (aliasRow.next()) |r| {
                 try writeStream.objectField("name");
                 try writeStream.write(r.text(0));
             }
@@ -138,16 +140,21 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
             try writeStream.write(player);
             try writeStream.objectField("aliases");
             try writeStream.beginArray();
-            while (currentNameRow.next()) |r| {
+            while (aliasRow.next()) |r| {
                 try writeStream.write(r.text(0));
             }
             try writeStream.endArray();
-            if (weapon != null and server != null) {
-                const weaponRow = try conn.row(queries.getPlayerSpecificWeaponForServerData, .{ player, weapon, server });
-                defer if (weaponRow) |r| r.deinit();
+            if (weapon != null) {
+                const query = try queries.Get.Player.WeaponData(
+                    allocator,
+                    .{ .weapon = weapon, .server = server },
+                );
+                defer allocator.free(query);
+                const resultsRow = try conn.row(query, .{ player, weapon, server });
+                defer if (resultsRow) |r| r.deinit();
                 var kills: i64 = 0;
                 var distance: f64 = 0;
-                if (weaponRow) |r| {
+                if (resultsRow) |r| {
                     kills = r.int(0);
                     distance = r.float(1);
                 }
@@ -155,96 +162,51 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 try writeStream.write(kills);
                 try writeStream.objectField("avg_distance");
                 try writeStream.print("{d}", .{distance});
-            } else if (weapon != null) {
-                const weaponRow = try conn.row(queries.getPlayerSpecificWeaponData, .{ player, weapon });
-                defer if (weaponRow) |r| r.deinit();
-                var kills: i64 = 0;
-                var distance: f64 = 0;
-                if (weaponRow) |r| {
-                    kills = r.int(0);
-                    distance = r.float(1);
-                }
-                try writeStream.objectField("kills");
-                try writeStream.write(kills);
-                try writeStream.objectField("avg_distance");
-                try writeStream.print("{d}", .{distance});
-            } else if (server != null) {
-                const currentKillsRow = try conn.row(queries.getPlayerKillsForServer, .{ player, server });
-                var kills: i64 = 0;
-                defer if (currentKillsRow) |r| r.deinit();
-
-                const currentDeathsRow = try conn.row(queries.getPlayerDeathsForServer, .{ player, server });
-                var deaths: i64 = 0;
-                defer if (currentDeathsRow) |r| r.deinit();
-
-                if (currentKillsRow) |r| {
-                    kills = r.int(0);
-                }
-                if (currentDeathsRow) |r| {
-                    deaths = r.int(0);
-                }
-
-                try writeStream.objectField("kills");
-                try writeStream.write(kills);
-                try writeStream.objectField("deaths");
-                try writeStream.write(deaths);
-
-                try writeStream.objectField("kd");
-                if (deaths == 0) {
-                    try writeStream.write(kills);
-                } else {
-                    try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
-                }
-
-                var weaponRow = try conn.rows(queries.getPlayerAllWeaponForServerData, .{ player, server });
-                defer weaponRow.deinit();
-
-                try writeStream.objectField("weapon_stats");
-                try writeStream.beginObject();
-                while (weaponRow.next()) |r| {
-                    try writeStream.objectField(r.text(0));
-                    try writeStream.beginObject();
-                    try writeStream.objectField("kills");
-                    try writeStream.write(r.int(1));
-                    try writeStream.objectField("avg_distance");
-                    try writeStream.print("{d}", .{r.float(2)});
-                    try writeStream.endObject();
-                }
-                try writeStream.endObject();
             } else {
-                const currentKillsRow = try conn.row(queries.getPlayerKills, .{player});
+                const killsQuery = try queries.Get.Player.Kills(
+                    allocator,
+                    .{ .weapon = weapon, .server = server },
+                );
+                defer allocator.free(killsQuery);
+                const deathsQuery = try queries.Get.Player.Deaths(
+                    allocator,
+                    .{ .weapon = weapon, .server = server },
+                );
+                defer allocator.free(deathsQuery);
+                const weaponsQuery = try queries.Get.Player.WeaponData(
+                    allocator,
+                    .{ .weapon = weapon, .server = server },
+                );
+                defer allocator.free(weaponsQuery);
+
+                const killsRow = try conn.row(killsQuery, .{ player, weapon, server });
+                defer if (killsRow) |r| r.deinit();
+                const deathsRow = try conn.row(deathsQuery, .{ player, weapon, server });
+                defer if (deathsRow) |r| r.deinit();
+
                 var kills: i64 = 0;
-                defer if (currentKillsRow) |r| r.deinit();
-
-                const currentDeathsRow = try conn.row(queries.getPlayerDeaths, .{player});
                 var deaths: i64 = 0;
-                defer if (currentDeathsRow) |r| r.deinit();
 
-                if (currentKillsRow) |r| {
+                if (killsRow) |r| {
                     kills = r.int(0);
                 }
-                if (currentDeathsRow) |r| {
+
+                if (deathsRow) |r| {
                     deaths = r.int(0);
                 }
+
+                var weaponRows = try conn.rows(weaponsQuery, .{ player, weapon, server });
+                defer weaponRows.deinit();
 
                 try writeStream.objectField("kills");
                 try writeStream.write(kills);
                 try writeStream.objectField("deaths");
                 try writeStream.write(deaths);
-
                 try writeStream.objectField("kd");
-                if (deaths == 0) {
-                    try writeStream.write(kills);
-                } else {
-                    try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
-                }
-
-                var weaponRow = try conn.rows(queries.getPlayerAllWeaponData, .{player});
-                defer weaponRow.deinit();
-
+                if (deaths == 0) try writeStream.write(kills) else try writeStream.print("{d}", .{@as(f64, @floatFromInt(kills)) / @as(f64, @floatFromInt(deaths))});
                 try writeStream.objectField("weapon_stats");
                 try writeStream.beginObject();
-                while (weaponRow.next()) |r| {
+                while (weaponRows.next()) |r| {
                     try writeStream.objectField(r.text(0));
                     try writeStream.beginObject();
                     try writeStream.objectField("kills");
@@ -270,87 +232,82 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
 fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var writeStream = std.json.writeStream(res.writer(), .{});
-
-    defer writeStream.deinit();
-
+    var allocator = gpa.allocator();
     var queryParameters = try req.query();
-    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
-    if (page < 1) {
-        page = 1;
-    }
     const weapon = queryParameters.get("weapon");
     const server = queryParameters.get("server");
-    var allPlayersRow: zqlite.Rows = undefined;
-    var resultsRow: ?zqlite.Row = undefined;
+    var page = std.fmt.parseInt(i64, queryParameters.get("page") orelse "1", 10) catch 1;
     var results: i64 = 0;
     var pages: i64 = 0;
 
-    if (weapon != null and server != null) {
-        allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeaponAndServer, .{ weapon, server, 25, 25 * (page - 1) });
-        resultsRow = try conn.row(queries.getAllPlayerDataForWeaponAndServerResultCount, .{ weapon, server });
-    } else if (weapon != null) {
-        allPlayersRow = try conn.rows(queries.getAllPlayerDataForWeapon, .{ weapon, 25, 25 * (page - 1) });
-        resultsRow = try conn.row(queries.getAllPlayerDataForWeaponResultCount, .{weapon});
-    } else if (server != null) {
-        allPlayersRow = try conn.rows(queries.getAllPlayerDataForServer, .{ server, 25, 25 * (page - 1) });
-        resultsRow = try conn.row(queries.getAllPlayerDataForServerResultCount, .{server});
-    } else {
-        allPlayersRow = try conn.rows(queries.getAllPlayerData, .{ 25, 25 * (page - 1) });
-        resultsRow = try conn.row(queries.getAllPlayerDataResultCount, .{});
-    }
+    const infoQuery = try queries.Get.Players.Count(
+        allocator,
+        .{ .weapon = weapon, .server = server },
+    );
+    defer allocator.free(infoQuery);
+    const resultsQuery = try queries.Get.Players.Data(
+        allocator,
+        .{ .weapon = weapon, .server = server },
+    );
+    defer allocator.free(resultsQuery);
 
-    if (resultsRow) |r| {
+    const infoRow = try conn.row(infoQuery, .{ weapon, server });
+    if (infoRow) |r| {
+        defer r.deinit();
         results = r.int(0);
     }
-
     pages = switch (results) {
         0 => 0,
         else => std.math.divCeil(i64, results, 25) catch 0,
     };
+    page = std.math.clamp(page, 0, pages);
 
-    defer allPlayersRow.deinit();
-    defer if (resultsRow) |r| r.deinit();
+    if (results != 0) {
+        var resultsRows = try conn.rows(resultsQuery, .{ 25, 25 * (page - 1), weapon, server });
+        defer resultsRows.deinit();
 
-    try writeStream.beginObject();
-    try writeStream.objectField("players");
-    try writeStream.beginObject();
-    if (weapon) |_| {
-        while (allPlayersRow.next()) |r| {
-            try writeStream.objectField(r.text(0));
-            try writeStream.beginObject();
-            try writeStream.objectField("name");
-            try writeStream.write(r.text(1));
-            try writeStream.objectField("kills");
-            try writeStream.write(r.int(2));
-            try writeStream.objectField("avg_distance");
-            try writeStream.print("{d}", .{r.float(3)});
-            try writeStream.endObject();
+        try writeStream.beginObject();
+        try writeStream.objectField("players");
+        try writeStream.beginObject();
+        if (weapon != null) {
+            while (resultsRows.next()) |r| {
+                try writeStream.objectField(r.text(0));
+                try writeStream.beginObject();
+                try writeStream.objectField("name");
+                try writeStream.write(r.text(1));
+                try writeStream.objectField("kills");
+                try writeStream.write(r.int(2));
+                try writeStream.objectField("avg_distance");
+                try writeStream.print("{d}", .{r.float(3)});
+                try writeStream.endObject();
+            }
+        } else {
+            while (resultsRows.next()) |r| {
+                try writeStream.objectField(r.text(0));
+                try writeStream.beginObject();
+                try writeStream.objectField("name");
+                try writeStream.write(r.text(1));
+                try writeStream.objectField("kills");
+                try writeStream.write(r.int(2));
+                try writeStream.objectField("deaths");
+                try writeStream.write(r.int(3));
+                try writeStream.endObject();
+            }
         }
-    } else {
-        while (allPlayersRow.next()) |r| {
-            try writeStream.objectField(r.text(0));
-            try writeStream.beginObject();
-            try writeStream.objectField("name");
-            try writeStream.write(r.text(1));
-            try writeStream.objectField("kills");
-            try writeStream.write(r.int(2));
-            try writeStream.objectField("deaths");
-            try writeStream.write(r.int(3));
-            try writeStream.endObject();
-        }
+
+        try writeStream.endObject();
+        try writeStream.objectField("info");
+        try writeStream.beginObject();
+        try writeStream.objectField("currentPage");
+        try writeStream.write(page);
+        try writeStream.objectField("allResults");
+        try writeStream.write(results);
+        try writeStream.objectField("maxPages");
+        try writeStream.write(pages);
+        try writeStream.endObject();
+        try writeStream.endObject();
     }
 
-    try writeStream.endObject();
-    try writeStream.objectField("info");
-    try writeStream.beginObject();
-    try writeStream.objectField("currentPage");
-    try writeStream.write(page);
-    try writeStream.objectField("allResults");
-    try writeStream.write(results);
-    try writeStream.objectField("maxPages");
-    try writeStream.write(pages);
-    try writeStream.endObject();
-    try writeStream.endObject();
     res.status = 200;
     res.content_type = httpz.ContentType.JSON;
     return;
@@ -371,7 +328,7 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
     var results: i64 = 0;
     var pages: i64 = 0;
 
-    resultsRow = try conn.row(queries.getServerCount, .{});
+    resultsRow = try conn.row(queries.Get.Servers.Count, .{});
     defer if (resultsRow) |r| r.deinit();
 
     if (resultsRow) |r| {
@@ -383,7 +340,7 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
         else => std.math.divCeil(i64, results, 25) catch 0,
     };
 
-    var serversRow = try conn.rows(queries.getServerList, .{});
+    var serversRow = try conn.rows(queries.Get.Servers.List, .{});
     defer serversRow.deinit();
 
     try writeStream.beginObject();

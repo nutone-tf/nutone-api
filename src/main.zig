@@ -326,10 +326,7 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
     defer writeStream.deinit();
 
     var queryParameters = try req.query();
-    var page = std.fmt.parseInt(u32, queryParameters.get("page") orelse "1", 10) catch 1;
-    if (page < 1) {
-        page = 1;
-    }
+    var page = std.fmt.parseInt(i64, queryParameters.get("page") orelse "1", 10) catch 1;
     var resultsRow: ?zqlite.Row = undefined;
     var results: i64 = 0;
     var pages: i64 = 0;
@@ -345,6 +342,8 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
         0 => 0,
         else => std.math.divCeil(i64, results, 25) catch 0,
     };
+
+    page = std.math.clamp(page, 1, pages);
 
     var serversRow = try conn.rows(queries.Get.Servers.List, .{});
     defer serversRow.deinit();

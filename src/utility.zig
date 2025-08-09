@@ -46,3 +46,8 @@ pub fn isValidServer(conn: zqlite.Conn, token: []const u8, server_id: []const u8
 pub fn readKillData(allocator: std.mem.Allocator, data: []const u8) !std.json.Parsed(KillData) {
     return std.json.parseFromSlice(KillData, allocator, data, .{ .allocate = .alloc_always });
 }
+
+pub fn processPlayerName(str: []const u8) []const u8 {
+    const bracketIndex = std.mem.indexOf(u8, str, ")");
+    if (bracketIndex != null) return str[bracketIndex.? + 1 ..] else return str;
+}

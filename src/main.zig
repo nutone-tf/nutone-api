@@ -89,6 +89,8 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         }
         if (parsedData) |pD| {
             const data = pD.value;
+            data.attacker_name = utility.processPlayerName(data.attacker_name);
+            data.victim_name = utility.processPlayerName(data.victim_name);
             if (!try utility.isValidServer(conn, serverToken.?, data.server_id)) {
                 try writeStream.beginObject();
                 try writeStream.objectField("info");

@@ -335,8 +335,8 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
         results = r.int(0);
     }
     pages = switch (results) {
-        0 => 0,
-        else => std.math.divCeil(i64, results, 25) catch 0,
+        0 => 1,
+        else => std.math.divCeil(i64, results, 25) catch 1,
     };
     page = std.math.clamp(page, 1, pages);
 
@@ -414,8 +414,8 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
     }
 
     pages = switch (results) {
-        0 => 0,
-        else => std.math.divCeil(i64, results, 25) catch 0,
+        0 => 1,
+        else => std.math.divCeil(i64, results, 25) catch 1,
     };
 
     page = std.math.clamp(page, 1, pages);

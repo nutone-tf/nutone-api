@@ -52,6 +52,7 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var serverToken: ?[]const u8 = null;
     const allocator = gpa.allocator();
+    var writeStream = std.json.writeStream(res.writer(), .{});
     var parsedData: ?std.json.Parsed(KillData) = null;
     defer if (parsedData) |pD| pD.deinit();
 
@@ -59,20 +60,47 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = utility.readKillData(allocator, kill) catch {
+                try writeStream.beginObject();
+                try writeStream.objectField("info");
+                try writeStream.beginObject();
+                try writeStream.objectField("status");
+                try writeStream.write(400);
+                try writeStream.objectField("description");
+                try writeStream.write("BAD REQUEST");
+                try writeStream.endObject();
+                try writeStream.endObject();
                 res.status = 400;
-                res.body = "Bad Request";
+                res.content_type = httpz.ContentType.JSON;
                 return;
             };
         } else {
+            try writeStream.beginObject();
+            try writeStream.objectField("info");
+            try writeStream.beginObject();
+            try writeStream.objectField("status");
+            try writeStream.write(418);
+            try writeStream.objectField("description");
+            try writeStream.write("I'M A TEAPOT");
+            try writeStream.endObject();
+            try writeStream.endObject();
             res.status = 418;
-            res.body = "I'm a Teapot";
+            res.content_type = httpz.ContentType.JSON;
             return;
         }
         if (parsedData) |pD| {
             const data = pD.value;
             if (!try utility.isValidServer(conn, serverToken.?, data.server_id)) {
+                try writeStream.beginObject();
+                try writeStream.objectField("info");
+                try writeStream.beginObject();
+                try writeStream.objectField("status");
+                try writeStream.write(403);
+                try writeStream.objectField("description");
+                try writeStream.write("FORBIDDEN");
+                try writeStream.endObject();
+                try writeStream.endObject();
                 res.status = 403;
-                res.body = "Forbidden";
+                res.content_type = httpz.ContentType.JSON;
                 return;
             }
             try conn.exec(
@@ -92,16 +120,43 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
             );
         } else {
+            try writeStream.beginObject();
+            try writeStream.objectField("info");
+            try writeStream.beginObject();
+            try writeStream.objectField("status");
+            try writeStream.write(418);
+            try writeStream.objectField("description");
+            try writeStream.write("I'M A TEAPOT");
+            try writeStream.endObject();
+            try writeStream.endObject();
             res.status = 418;
-            res.body = "I'm a Teapot";
+            res.content_type = httpz.ContentType.JSON;
             return;
         }
+        try writeStream.beginObject();
+        try writeStream.objectField("info");
+        try writeStream.beginObject();
+        try writeStream.objectField("status");
+        try writeStream.write(200);
+        try writeStream.objectField("description");
+        try writeStream.write("OK");
+        try writeStream.endObject();
+        try writeStream.endObject();
         res.status = 200;
-        res.body = "OK";
+        res.content_type = httpz.ContentType.JSON;
         return;
     } else {
+        try writeStream.beginObject();
+        try writeStream.objectField("info");
+        try writeStream.beginObject();
+        try writeStream.objectField("status");
+        try writeStream.write(401);
+        try writeStream.objectField("description");
+        try writeStream.write("UNAUTHORIZED");
+        try writeStream.endObject();
+        try writeStream.endObject();
         res.status = 401;
-        res.body = "Unauthorized";
+        res.content_type = httpz.ContentType.JSON;
         return;
     }
 }
@@ -217,13 +272,29 @@ fn getPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
                 }
                 try writeStream.endObject();
             }
+            try writeStream.objectField("info");
+            try writeStream.beginObject();
+            try writeStream.objectField("status");
+            try writeStream.write(200);
+            try writeStream.objectField("description");
+            try writeStream.write("OK");
+            try writeStream.endObject();
             try writeStream.endObject();
             res.status = 200;
             res.content_type = httpz.ContentType.JSON;
             return;
         } else {
+            try writeStream.beginObject();
+            try writeStream.objectField("info");
+            try writeStream.beginObject();
+            try writeStream.objectField("status");
+            try writeStream.write(404);
+            try writeStream.objectField("description");
+            try writeStream.write("NOT FOUND");
+            try writeStream.endObject();
+            try writeStream.endObject();
             res.status = 404;
-            res.body = "Not Found";
+            res.content_type = httpz.ContentType.JSON;
             return;
         }
     }
@@ -305,6 +376,10 @@ fn getAllPlayerData(req: *httpz.Request, res: *httpz.Response) !void {
     }
     try writeStream.objectField("info");
     try writeStream.beginObject();
+    try writeStream.objectField("status");
+    try writeStream.write(200);
+    try writeStream.objectField("description");
+    try writeStream.write("OK");
     try writeStream.objectField("currentPage");
     try writeStream.write(page);
     try writeStream.objectField("allResults");
@@ -363,6 +438,10 @@ fn getServerList(req: *httpz.Request, res: *httpz.Response) !void {
     try writeStream.endObject();
     try writeStream.objectField("info");
     try writeStream.beginObject();
+    try writeStream.objectField("status");
+    try writeStream.write(200);
+    try writeStream.objectField("description");
+    try writeStream.write("OK");
     try writeStream.objectField("currentPage");
     try writeStream.write(page);
     try writeStream.objectField("allResults");

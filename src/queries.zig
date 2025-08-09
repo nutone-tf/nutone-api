@@ -7,7 +7,7 @@ pub const Create = struct {
         pub const Players = "create table if not exists players (uid text, name text, timestamp timestamp default current_timestamp, primary key (uid, name))";
         pub const Servers = "create table if not exists servers (server_id text primary key, server_name text, owner text, timestamp timestamp default current_timestamp)";
         pub const Matches = "create table if not exists matches (match_id text primary key, server_id text, game_mode text, map text, timestamp timestamp default current_timestamp)";
-        pub const KillData = "create table if not exists kill_data (timestamp timestamp default current_timestamp, match_id text, server_id text, game_time real, attacker_uid text, cause_of_death text, attacker_titan text, attacker_x real, attacker_y real, attacker_z real, victim_uid text, victim_weapon text, victim_titan text, victim_x real, victim_y real, victim_z real, cause_of_death text, distance real)";
+        pub const KillData = "create table if not exists kill_data (timestamp timestamp default current_timestamp, match_id text, server_id text, game_time real, attacker_uid text, attacker_weapon text, attacker_titan text, attacker_x real, attacker_y real, attacker_z real, victim_uid text, victim_weapon text, victim_titan text, victim_x real, victim_y real, victim_z real, cause_of_death text, distance real)";
     };
     pub const Index = struct {
         pub const KillDataTimestamp = "create index if not exists kill_data_timestamp_idx on kill_data(timestamp)";
@@ -21,7 +21,7 @@ pub const Insert = struct {
     pub const Server = "insert or replace into servers (server_id, server_name, owner) values (?1, ?2, (select owner from tokens where token = ?3 limit 1))";
     pub const Player = "insert or replace into players (uid, name) values (?1, ?2), (?3, ?4)";
     pub const Match = "insert or ignore into matches (match_id, server_id, game_mode, map) values (?1, ?2, ?3, ?4)";
-    pub const Kill = "insert into kill_data (match_id, server_id, game_time, attacker_uid, cause_of_death, attacker_titan, attacker_x, attacker_y, attacker_z, victim_uid, victim_weapon, victim_x, victim_y, victim_z, cause_of_death, distance) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)";
+    pub const Kill = "insert into kill_data (match_id, server_id, game_time, attacker_uid, attacker_weapon, attacker_titan, attacker_x, attacker_y, attacker_z, victim_uid, victim_weapon, victim_x, victim_y, victim_z, cause_of_death, distance) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)";
 };
 
 pub const Validate = struct {

@@ -22,7 +22,7 @@ pub fn main() !void {
     }
     try initDB();
     const cors = try server.middleware(httpz.middleware.Cors, .{
-        .origin = "https://nutone.okudai.dev/",
+        .origin = "*",
     });
     var router = try server.router(.{ .middlewares = &.{cors} });
 

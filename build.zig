@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
             "-DSQLITE_DQS=0",
             "-DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1",
             "-DSQLITE_USE_ALLOCA=1",
-            "-DSQLITE_THREADSAFE=2",
+            "-DSQLITE_THREADSAFE=1",
             "-DSQLITE_TEMP_STORE=3",
             "-DSQLITE_ENABLE_API_ARMOR=1",
             "-DSQLITE_ENABLE_UNLOCK_NOTIFY",

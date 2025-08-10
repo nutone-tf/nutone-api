@@ -6,7 +6,7 @@ const KillData = @import("types.zig").KillData;
 
 pub fn isValidToken(conn: zqlite.Conn, req: *httpz.Request) !bool {
     if (req.header("token")) |token| {
-        if (try conn.row(queries.Validate.Token, .{token})) |row| {
+        if (conn.row(queries.Validate.Token, .{token}) catch return false) |row| {
             defer row.deinit();
             return true;
         }
@@ -24,7 +24,7 @@ pub fn isServerIDChar(c: u8) bool {
 pub fn isValidServer(conn: zqlite.Conn, token: []const u8, server_id: []const u8) !bool {
     if (server_id.len > 30) return false;
     for (server_id) |c| if (!isServerIDChar(c)) return false;
-    if (try conn.row(queries.Validate.ServerOwnership, .{ server_id, token })) |row| {
+    if (conn.row(queries.Validate.ServerOwnership, .{ server_id, token }) catch return false) |row| {
         defer row.deinit();
         const success = row.boolean(0);
         if (success) {

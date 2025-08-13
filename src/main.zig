@@ -10,6 +10,16 @@ const dbFlags = zqlite.OpenFlags.Create | zqlite.OpenFlags.EXResCode;
 var connPtr: *const zqlite.Conn = undefined;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
+//maybe a better name
+const responseInfo = struct {
+    info: responseStatus = .{},
+};
+
+const responseStatus = struct {
+    status: u16 = 0,
+    description: []const u8 = "",
+};
+
 pub fn main() !void {
     var conn = try zqlite.open("./nutone.db", dbFlags);
     connPtr = &conn;
@@ -52,7 +62,8 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
     var conn = connPtr.*;
     var serverToken: ?[]const u8 = null;
     const allocator = gpa.allocator();
-    var writeStream = std.json.writeStream(res.writer(), .{});
+    // var writeStream = std.json.writeStream(res.writer(), .{});
+    var responseBody: responseInfo = .{};
     var parsedData: ?std.json.Parsed(KillData) = null;
     defer if (parsedData) |pD| pD.deinit();
 
@@ -60,29 +71,17 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
         serverToken = req.header("token").?;
         if (req.body()) |kill| {
             parsedData = utility.readKillData(allocator, kill) catch {
-                try writeStream.beginObject();
-                try writeStream.objectField("info");
-                try writeStream.beginObject();
-                try writeStream.objectField("status");
-                try writeStream.write(400);
-                try writeStream.objectField("description");
-                try writeStream.write("BAD REQUEST");
-                try writeStream.endObject();
-                try writeStream.endObject();
+                responseBody.info.description = "BAD REQUEST";
+                responseBody.info.status = 400;
+                try std.json.stringify(responseBody, .{}, res.writer());
                 res.status = 400;
                 res.content_type = httpz.ContentType.JSON;
                 return;
             };
         } else {
-            try writeStream.beginObject();
-            try writeStream.objectField("info");
-            try writeStream.beginObject();
-            try writeStream.objectField("status");
-            try writeStream.write(418);
-            try writeStream.objectField("description");
-            try writeStream.write("I'M A TEAPOT");
-            try writeStream.endObject();
-            try writeStream.endObject();
+            responseBody.info.description = "I'M A TEAPOT";
+            responseBody.info.status = 418;
+            try std.json.stringify(responseBody, .{}, res.writer());
             res.status = 418;
             res.content_type = httpz.ContentType.JSON;
             return;
@@ -92,15 +91,9 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
             data.attacker_name = utility.processPlayerName(data.attacker_name);
             data.victim_name = utility.processPlayerName(data.victim_name);
             if (!try utility.isValidServer(conn, serverToken.?, data.server_id)) {
-                try writeStream.beginObject();
-                try writeStream.objectField("info");
-                try writeStream.beginObject();
-                try writeStream.objectField("status");
-                try writeStream.write(403);
-                try writeStream.objectField("description");
-                try writeStream.write("FORBIDDEN");
-                try writeStream.endObject();
-                try writeStream.endObject();
+                responseBody.info.description = "FORBIDDEN";
+                responseBody.info.status = 403;
+                try std.json.stringify(responseBody, .{}, res.writer());
                 res.status = 403;
                 res.content_type = httpz.ContentType.JSON;
                 return;
@@ -122,41 +115,23 @@ fn insertServerData(req: *httpz.Request, res: *httpz.Response) !void {
                 .{ data.match_id, data.server_id, data.game_time, data.attacker_uid, data.attacker_weapon, data.attacker_titan, data.attacker_x, data.attacker_y, data.attacker_z, data.victim_uid, data.victim_weapon, data.victim_x, data.victim_y, data.victim_z, data.cause_of_death, data.distance },
             );
         } else {
-            try writeStream.beginObject();
-            try writeStream.objectField("info");
-            try writeStream.beginObject();
-            try writeStream.objectField("status");
-            try writeStream.write(418);
-            try writeStream.objectField("description");
-            try writeStream.write("I'M A TEAPOT");
-            try writeStream.endObject();
-            try writeStream.endObject();
+            responseBody.info.description = "I'M A TEAPOT";
+            responseBody.info.status = 418;
+            try std.json.stringify(responseBody, .{}, res.writer());
             res.status = 418;
             res.content_type = httpz.ContentType.JSON;
             return;
         }
-        try writeStream.beginObject();
-        try writeStream.objectField("info");
-        try writeStream.beginObject();
-        try writeStream.objectField("status");
-        try writeStream.write(200);
-        try writeStream.objectField("description");
-        try writeStream.write("OK");
-        try writeStream.endObject();
-        try writeStream.endObject();
+        responseBody.info.description = "OK";
+        responseBody.info.status = 200;
+        try std.json.stringify(responseBody, .{}, res.writer());
         res.status = 200;
         res.content_type = httpz.ContentType.JSON;
         return;
     } else {
-        try writeStream.beginObject();
-        try writeStream.objectField("info");
-        try writeStream.beginObject();
-        try writeStream.objectField("status");
-        try writeStream.write(401);
-        try writeStream.objectField("description");
-        try writeStream.write("UNAUTHORIZED");
-        try writeStream.endObject();
-        try writeStream.endObject();
+        responseBody.info.description = "UNAUTHORIZED";
+        responseBody.info.status = 401;
+        try std.json.stringify(responseBody, .{}, res.writer());
         res.status = 401;
         res.content_type = httpz.ContentType.JSON;
         return;

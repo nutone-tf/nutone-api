@@ -34,6 +34,10 @@ pub fn main() !void {
     try server.listen();
 }
 
+test "example Test" {
+    try std.testing.expect(true);
+}
+
 fn initDB() !void {
     var conn = connPtr.*;
     try conn.exec(queries.Create.Table.Tokens, .{});
